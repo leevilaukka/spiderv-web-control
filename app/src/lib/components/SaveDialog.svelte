@@ -33,7 +33,9 @@
 <dialog bind:this={dialog} onclose={() => (amp.saveDialogOpen = false)} aria-labelledby="save-title">
   <form onsubmit={save}>
     <h2 id="save-title">Save preset</h2>
-    {#if amp.imported}
+    {#if amp.imported && !amp.imported.file}
+      <p class="from">Made by the tone assistant.</p>
+    {:else if amp.imported}
       <p class="from">
         Imported from <strong>{amp.imported.file}</strong>{amp.imported.author ? ` by ${amp.imported.author}` : ''}.
         Its name{amp.imported.tnid ? ' and CustomTone id' : ''}{amp.imported.label ? ' and label' : ''} are saved with the preset;

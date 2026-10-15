@@ -6,13 +6,26 @@ Tested with a Spider V 20 MkII on firmware 2.0.1.
 
 - Browse and load the amp's 128 presets
 - See the signal chain, switch blocks on and off, and change amp, effect, reverb, wah and cab/mic models
+- **Drag effects around the chain** (or Alt+← →) to the places the amp allows: effects, reverb and
+  volume pedal before or after the amp, and effects in any order on each side
 - Turn every parameter knob, with names and ranges from Line 6's model catalog
 - Follows preset changes and edits made on the amp itself
+- **GX-100-style performance controls**, kept per preset in the browser and saved along with the tone:
+  - **Shortcuts** switch several blocks and set knobs at once (like CTL/assign switches with min/max),
+    on a key, a button or a MIDI footswitch; toggle or momentary
+  - **Channels A/B**: two setups of the amp, cab or any blocks in one preset, switched with one key,
+    like a switched dual amp or two-way chain (the Spider V has one amp, so they take turns)
+  - **Stage view**: big footswitch buttons; memory mode picks presets in banks of four, manual mode switches blocks
+  - **MIDI pedals**: program change selects presets, footswitches trigger shortcuts or the channel switch,
+    and an expression pedal sweeps a shortcut's knobs
+  - The tone assistant can set up shortcuts and channels too
 - **Import tone files** (`.svl6p` from Spider V Remote, the JSON "version 5" format of
   Line 6's Spider Remote apps, or raw preset dumps) via the button or drag-and-drop, and **export** the current tone as `.svl6p`
 - **Save** the current tone to any preset slot (with a new name), with one-click undo,
   and **back up** all presets to a file. An imported tone saves under the name and
   CustomTone id from its file
+- **Tone assistant**: describe a sound and an AI model (Claude or Gemini, with your own API key)
+  builds it on the amp from the model catalog, then refines it as you ask
 - **Listen**: play the amp's USB audio output through the browser
 - Protocol console for sending raw commands
 - Demo mode with a simulated amp

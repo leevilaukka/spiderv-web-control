@@ -2,15 +2,31 @@
   // Protocol log plus a raw command line, for exploring the protocol further.
   import { amp } from '../amp.svelte';
   import { toHex } from '../protocol/codec';
+  import type { LogEntry } from '../protocol/client';
 
   let showRaw = $state(false);
   let command = $state('');
   let list: HTMLOListElement | undefined = $state();
 
+  // Paused: the view keeps the entries it had, so lines don't scroll away
+  // (or shift as the oldest are dropped) while you read them.
+  let frozen = $state.raw<LogEntry[] | null>(null);
+  const shown = $derived(frozen ?? amp.log);
+  const waiting = $derived(frozen ? amp.log.filter((e) => e.t > (frozen!.at(-1)?.t ?? 0)).length : 0);
+
   $effect(() => {
     void amp.log.length;
-    if (list) list.scrollTop = list.scrollHeight;
+    if (list && !frozen) list.scrollTop = list.scrollHeight;
   });
+
+  function togglePause() {
+    frozen = frozen ? null : amp.log.slice();
+  }
+
+  function clear() {
+    amp.log.length = 0;
+    if (frozen) frozen = [];
+  }
 
   function send(e: SubmitEvent) {
     e.preventDefault();
@@ -34,10 +50,13 @@
       <button type="submit">Send</button>
     </form>
     <label><input type="checkbox" bind:checked={showRaw} /> Show bytes</label>
-    <button onclick={() => (amp.log.length = 0)}>Clear</button>
+    <button class:paused={!!frozen} aria-pressed={!!frozen} title={frozen ? 'Show new messages and follow the log again' : 'Stop scrolling to read the log'} onclick={togglePause}>
+      {#if frozen}▶ Resume{waiting ? ` (${waiting} new)` : ''}{:else}❚❚ Pause{/if}
+    </button>
+    <button onclick={clear}>Clear</button>
   </div>
   <ol bind:this={list}>
-    {#each amp.log as e, i (i)}
+    {#each shown as e, i (i)}
       <li class={e.dir}>
         <span class="t">{time(e.t)}</span>
         <span class="d">{e.dir === 'out' ? '→' : e.dir === 'in' ? '←' : '•'}</span>
@@ -87,6 +106,7 @@
     padding: 5px 10px;
     cursor: pointer;
   }
+  button.paused { border-color: var(--g-stomp); color: var(--g-stomp); }
   ol {
     list-style: none;
     margin: 0;

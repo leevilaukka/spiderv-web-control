@@ -17,6 +17,7 @@ export type ModelList = keyof Catalog['lists'];
 // `state` is the key under which the preset dump stores it.
 export type Control = {
   key: string;
+  sym: string; // control symbol, stable across presets (e.g. "Drive", "ChannelVolume")
   label: string;
   obj: number;
   ctrl: number;
@@ -44,6 +45,9 @@ export type Slot = {
   extras: Control[]; // mix, pre/post, channel volume, early reflections...
   mic?: number;
 };
+
+// The editor shows 0..1 knobs as 0 to 10.
+export const displayScale = (c: { min: number; max: number }) => (c.min === 0 && c.max === 1 ? 10 : 1);
 
 // Chain slots in display order, with the GuitarProc controls that belong to them.
 const SLOTS: { sym: string; label: string; list?: ModelList; enable?: string; extras?: [string, string][] }[] = [
@@ -102,7 +106,7 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
     if (ctrl === undefined || state === undefined || !e) return undefined;
     const type = msgType(e.type);
     return {
-      key, label, obj: tone.id, ctrl, state, type, value: e.value as number,
+      key, sym: ctrlName, label, obj: tone.id, ctrl, state, type, value: e.value as number,
       min: 0, max: 1, unit: '',
     };
   };
@@ -125,7 +129,7 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
       if (ctrl === undefined || state === undefined || !e) continue;
       used.add(state);
       params.push({
-        key: `${blk.id}:${ctrl}`, label: cp.name, obj: blk.id, ctrl, state, type: msgType(e.type),
+        key: `${blk.id}:${ctrl}`, sym: cp.sym, label: cp.name, obj: blk.id, ctrl, state, type: msgType(e.type),
         value: e.value as number, min: Number(cp.min), max: Number(cp.max), def: Number(cp.def),
         unit: cp.min === -96 ? 'db' : '',
       });
@@ -135,7 +139,7 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
       if (used.has(e.key) || ctrl === undefined) continue;
       const float = e.type === VType.Float;
       params.push({
-        key: `${blk.id}:${ctrl}`, label: humanize(st.name(e.key) ?? ''), obj: blk.id, ctrl, state: e.key,
+        key: `${blk.id}:${ctrl}`, sym: st.name(ctrl) ?? '', label: humanize(st.name(e.key) ?? ''), obj: blk.id, ctrl, state: e.key,
         type: msgType(e.type), value: e.value as number,
         min: float ? Math.min(0, e.value as number) : 0, max: float ? Math.max(1, e.value as number) : e.type === VType.Bool ? 1 : 16,
       });
@@ -153,7 +157,7 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
       const level = st.id('Level'), levelState = st.id('LevelState');
       const e = air?.params.find((p) => p.key === levelState);
       if (air && level !== undefined && e) {
-        extras.push({ key: `${air.id}:${level}`, label: 'Early reflections', obj: air.id, ctrl: level, state: e.key, type: MsgType.Float, value: e.value as number, min: 0, max: 1 });
+        extras.push({ key: `${air.id}:${level}`, sym: 'Level', label: 'Early reflections', obj: air.id, ctrl: level, state: e.key, type: MsgType.Float, value: e.value as number, min: 0, max: 1 });
       }
     }
 

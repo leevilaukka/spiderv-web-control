@@ -1,6 +1,8 @@
 <script lang="ts">
   import { amp } from '../amp.svelte';
+  import { controls } from '../controls.svelte';
   import Menu from './Menu.svelte';
+  import ControlsDialog from './ControlsDialog.svelte';
 
   const short = $derived(amp.demo ? 'Demo amp' : amp.label.replace(/ MIDI \d+$/, ''));
 </script>
@@ -17,12 +19,18 @@
       Re-read tone
       <small>Fetch the current tone from the amp again</small>
     </button>
+    <button class="item" role="menuitem" onclick={() => { close(); controls.dialogOpen = true; }}>
+      Controls and MIDI pedals…
+      <small>Channel switch key, foot controllers, expression pedals</small>
+    </button>
     <button class="item" role="menuitem" onclick={() => { close(); amp.disconnect(); }}>
       Disconnect
       <small>Close the tab to free the amp for other programs</small>
     </button>
   {/snippet}
 </Menu>
+
+<ControlsDialog />
 
 <style>
   .dot {

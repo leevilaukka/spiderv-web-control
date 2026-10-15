@@ -1,6 +1,7 @@
 <script lang="ts">
   import { amp } from './lib/amp.svelte';
   import Chain from './lib/components/Chain.svelte';
+  import Shortcuts from './lib/components/Shortcuts.svelte';
   import SlotEditor from './lib/components/SlotEditor.svelte';
   import PresetList from './lib/components/PresetList.svelte';
   import Console from './lib/components/Console.svelte';
@@ -8,6 +9,10 @@
   import PresetActions from './lib/components/PresetActions.svelte';
   import DeviceMenu from './lib/components/DeviceMenu.svelte';
   import Notice from './lib/components/Notice.svelte';
+  import Assistant from './lib/components/Assistant.svelte';
+  import Stage from './lib/components/Stage.svelte';
+  import { controls } from './lib/controls.svelte';
+  import { assistant } from './lib/assistant.svelte';
   import { WebMidiTransport } from './lib/protocol/webmidi';
 
   const midi = WebMidiTransport.supported();
@@ -60,12 +65,16 @@
         <div class="title">
           <strong>{amp.imported ? amp.imported.name : amp.presetName}</strong>
           <span class="state">
-            {#if amp.imported}Imported from file, not saved{:else if amp.dirty}Edited, not saved{:else}Saved preset{/if}
+            {#if amp.imported}{amp.imported.file ? 'Imported from file' : 'Made by the tone assistant'}, not saved{:else if amp.dirty || amp.channelsEdited}Edited, not saved{:else}Saved preset{/if}
           </span>
         </div>
         <PresetActions />
       </div>
       <div class="right">
+        <button class="assist" onclick={() => (controls.stage = true)} title="Big footswitch view for playing">Stage</button>
+        <button class="assist" aria-expanded={assistant.open} onclick={() => (assistant.open = !assistant.open)}>
+          <span aria-hidden="true">✦</span> Tone assistant
+        </button>
         <AudioMonitor />
         <DeviceMenu />
       </div>
@@ -87,11 +96,13 @@
     >
       <Notice />
       <Chain />
+      <Shortcuts />
       {#if slot}
         <SlotEditor {slot} />
       {/if}
       <p class="hint">
-        Changes reach the amp instantly; Save stores them in a preset. The key on each block toggles it, like a footswitch.
+        Changes reach the amp instantly; Save stores them in a preset. The key on each block toggles it, like a footswitch;
+        shortcuts switch blocks and knobs at once and, like channels A/B, belong to the preset (kept in this browser).
       </p>
     </main>
 
@@ -104,6 +115,8 @@
       {/if}
     </section>
   </div>
+  <Assistant />
+  <Stage />
 {/if}
 
 <style>
@@ -221,6 +234,13 @@
     gap: 8px;
     margin-left: auto;
   }
+  .assist {
+    font-size: 13px;
+    padding: 6px 12px;
+    white-space: nowrap;
+  }
+  .assist span { color: var(--accent); }
+  .assist[aria-expanded='true'] { border-color: var(--accent); }
   .side {
     grid-area: side;
     display: flex;
