@@ -1,0 +1,121 @@
+{
+    "version" : 5,
+    "data" : {
+        "meta" : {
+            "author" : "Line 6",
+            "tnid" : 2471945,
+            "application" : "Spider Remote",
+            "modifieddate" : 1474505144,
+            "name" : "Arachnid Rhythm",
+            "appversion" : 1
+        },
+        "device" : 2228226,
+        "tone" : {
+            "volume" : {
+                "@model" : "VolumePedal",
+                "@enabled" : 1,
+                "@post" : 1,
+                "MaxVol" : 1,
+                "MinVol" : 0,
+                "Volume" : 1
+            },
+            "cab" : {
+                "@mic" : 2,
+                "@model" : "4x12Green25sStudio",
+                "Level" : 0
+            },
+            "fx2" : {
+                "@model" : "L6Flanger",
+                "@temposync" : 1,
+                "@post" : 0,
+                "Depth" : 0.146817,
+                "Freq" : 0.319372,
+                "SyncSelect" : 1,
+                "@mixtype" : 1,
+                "@mix" : 0.434292,
+                "@enabled" : 0
+            },
+            "eq" : {
+                "@model" : "ParaGraphic4_band",
+                "gain.1" : 0.38501,
+                "gain.2" : 0.503937,
+                "Hi" : 0.223214,
+                "Gain" : 0.50308,
+                "LMid" : 0.328754,
+                "Low" : 0.171429,
+                "HMid" : 0.153491,
+                "gain" : 0.503937,
+                "@enabled" : 0
+            },
+            "gate" : {
+                "Decay" : 0.301493,
+                "@model" : "Gate",
+                "@enabled" : 0,
+                "Thresh" : -49.14627
+            },
+            "fx3" : {
+                "@model" : "AnalogDelay",
+                "@temposync" : 1,
+                "@post" : 1,
+                "Bass" : 0.5,
+                "Time" : 0.020265,
+                "Treble" : 0.5,
+                "SyncSelect" : 12,
+                "@mixtype" : 0,
+                "@mix" : 0.273101,
+                "@enabled" : 0,
+                "Feedback" : 0
+            },
+            "global" : {
+                "@tweakmax" : 1,
+                "@tweakparam" : "@mix",
+                "@tweakgroup" : "fx3",
+                "@pedal2assign" : 0,
+                "@tweakmin" : 0,
+                "@tempo" : 142.563,
+                "@speakermode" : 0.0
+            },
+            "compressor" : {
+                "@model" : "SharcPodFixedComp",
+                "@enabled" : 0,
+                "Thresh\/G" : 1,
+                "Gain" : 0.168378
+            },
+            "wah" : {
+                "Pedal" : 0.998973,
+                "@model" : "Line6Vetta",
+                "@enabled" : 0
+            },
+            "fx1" : {
+                "@model" : "ClassicDistortion",
+                "@post" : 0,
+                "Gain" : 0.483582,
+                "Drive" : 0.514925,
+                "@mixtype" : 0,
+                "@mix" : 1,
+                "@enabled" : 1,
+                "Tone" : 0.5
+            },
+            "amp" : {
+                "@model" : "BritPlexiJumpLead",
+                "Treble" : 0.95,
+                "Bass" : 0.57,
+                "Drive" : 0.795276,
+                "@volume" : 0.519649,
+                "Mid" : 0.8,
+                "Presence" : 0.8
+            },
+            "reverb" : {
+                "@model" : "RichChamber2",
+                "PreDelay" : 0.188912,
+                "@post" : 1,
+                "Decay" : 0.276181,
+                "Tone" : 0.26386,
+                "@mix" : 0.301848,
+                "@enabled" : 0
+            }
+        },
+        "device_version" : 16778081
+    },
+    "schema" : "L6Preset"
+}

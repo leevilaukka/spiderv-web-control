@@ -1,0 +1,15 @@
+{
+  "name": "spiderv-control",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "cd app && bun run dev",
+    "build": "cd app && bun run build",
+    "check": "cd app && bun run check",
+    "test": "bun test",
+    "cli": "bun tools/spiderv-cli.ts"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.3"
+  }
+}

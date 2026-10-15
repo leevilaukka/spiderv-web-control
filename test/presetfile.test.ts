@@ -1,0 +1,100 @@
+// Tone file import/export against the simulated amp.
+import { expect, test } from 'bun:test';
+import session from './fixtures/spiderv20-mkii-session.json';
+import line6Tone from './fixtures/line6-arachnid-rhythm.json';
+import { readFileSync } from 'node:fs';
+import { SpiderV } from '../app/src/lib/protocol/client';
+import { MockTransport } from '../app/src/lib/protocol/mock';
+import { applyImport, planImport, readToneFile, toToneFile } from '../app/src/lib/presetfile';
+import { buildChain } from '../app/src/lib/tone';
+
+const bytesOf = (v: unknown) => [...new TextEncoder().encode(JSON.stringify(v))];
+
+async function connect() {
+  const mock = new MockTransport(session);
+  mock.latency = 0;
+  const amp = new SpiderV(mock);
+  await amp.connect();
+  return amp;
+}
+
+test('plans a Line 6 tone file onto this amp', async () => {
+  const amp = await connect();
+  const plan = planImport(readToneFile(bytesOf(line6Tone), amp.symbols!), amp.symbols!);
+  expect(plan.name).toBe('Arachnid Rhythm');
+  expect(plan.warnings).toEqual([]);
+  expect(plan.ops.filter((o) => o.kind === 'model')).toHaveLength(11);
+  // Models already loaded are not reloaded.
+  const fixed = planImport(readToneFile(bytesOf(line6Tone), amp.symbols!), amp.symbols!, await amp.readPreset());
+  expect(fixed.ops.filter((o) => o.kind === 'model').map((o) => o.label.split(':')[0])).toEqual(['wah', 'fx1', 'fx2', 'fx3', 'amp', 'cab', 'reverb']);
+  // Settings without a counterpart on the amp are reported, not guessed.
+  expect(plan.skipped).toContain('fx2.@temposync');
+  expect(plan.skipped).toContain('global.@tweakparam');
+  expect(plan.ops.some((o) => o.kind === 'tempo')).toBe(true);
+});
+
+test('importing a tone file sets models, parameters and switches', async () => {
+  const amp = await connect();
+  const plan = planImport(readToneFile(bytesOf(line6Tone), amp.symbols!), amp.symbols!);
+  expect(await applyImport(amp, plan)).toEqual([]);
+
+  const chain = buildChain(await amp.readPreset(), amp.symbols!);
+  const slot = (s: string) => chain.find((x) => x.sym === s)!;
+  expect(slot('Amp').modelSym).toBe('BritPlexiJumpLead');
+  expect(slot('Amp').params.find((p) => p.label === 'Bass')!.value).toBeCloseTo(0.57);
+  expect(slot('Amp').extras.find((p) => p.label === 'Volume')!.value).toBeCloseTo(0.519649);
+  expect(slot('StudioCab').modelSym).toBe('4x12Green25sStudio421'); // @mic 2
+  expect(slot('FX4').modelSym).toBe('RichChamber2');
+  expect(slot('FX2').enable!.value).toBe(0);
+  expect(slot('FX2').extras.find((p) => p.label === 'Mix')!.value).toBeCloseTo(0.434292);
+  expect(slot('Gate').params.find((p) => p.label === 'Threshold')!.value).toBeCloseTo(-49.14627);
+});
+
+test('export then import reproduces the tone', async () => {
+  const source = await connect();
+  const exported = toToneFile(await source.readPreset(), source.symbols!, 0x220005);
+  expect(exported.data.tone.amp['@model']).toBe('DoubleVerb');
+
+  // Start from a different tone, then import the export.
+  const amp = await connect();
+  await applyImport(amp, planImport(readToneFile(bytesOf(line6Tone), amp.symbols!), amp.symbols!));
+  const plan = planImport(readToneFile(bytesOf(exported), amp.symbols!), amp.symbols!);
+  expect(await applyImport(amp, plan)).toEqual([]);
+
+  const again = toToneFile(await amp.readPreset(), amp.symbols!, 0x220005);
+  again.data.meta = exported.data.meta;
+  expect(again).toEqual(exported);
+});
+
+test('reads raw preset dumps and rejects other files', async () => {
+  const amp = await connect();
+  const raw = [...Buffer.from(session.editBuffer, 'base64')];
+  expect(readToneFile(raw, amp.symbols!).data.tone.amp['@model']).toBe('DoubleVerb');
+  expect(() => readToneFile(bytesOf({ version: 3, data: {} }), amp.symbols!)).toThrow(/version 3/);
+  expect(() => readToneFile([...new TextEncoder().encode('{nope')], amp.symbols!)).toThrow(/Not a valid tone file/);
+});
+
+test('imports a .svl6p file saved by Spider V Remote / CustomTone', async () => {
+  const amp = await connect();
+  const bytes = [...readFileSync(new URL('./fixtures/customtone-do-i-wanna-know.svl6p', import.meta.url))];
+  const plan = planImport(readToneFile(bytes, amp.symbols!), amp.symbols!, await amp.readPreset());
+  expect(plan.author).toBe('MATOUK');
+  expect(await applyImport(amp, plan)).toEqual([]);
+
+  const chain = buildChain(await amp.readPreset(), amp.symbols!);
+  const slot = (s: string) => chain.find((x) => x.sym === s)!;
+  expect(slot('Amp').modelSym).toBe('Hiway100');
+  expect(slot('FX1').modelSym).toBe('KillerZ');
+  expect(slot('FX1').params.find((p) => p.label === 'Mid Freq')!.value).toBeCloseTo(1);
+  expect(slot('FX1').enable!.value).toBe(1);    // "@enabled": true
+  expect(slot('FX3').enable!.value).toBe(0);    // "@enabled": false
+  expect(slot('StudioCab').modelSym).toBe('4x12BritV30Studio421');
+  expect(slot('StudioCab').extras.find((p) => p.label === 'Early reflections')!.value).toBeCloseTo(0.422998);
+
+  // Exporting writes the same shape back.
+  const out = toToneFile(await amp.readPreset(), amp.symbols!, 0x220005, 0x02010030);
+  expect(out.schema).toBe('L6Preset');
+  expect(out.data.device_version).toBe(0x02010000);
+  expect(out.data.tone.fx1['@enabled']).toBe(true);
+  expect(out.data.tone.fx1['Mid Amt']).toBeCloseTo(0.565098);
+});
