@@ -1,4 +1,4 @@
-# Spider V Control
+# Spider V Web Control
 
 A browser-based editor for Line 6 Spider V amps over USB, built from a
 reverse-engineered protocol. Works on Linux (and anywhere else with Web MIDI).
@@ -45,7 +45,7 @@ into the phone with a USB OTG adapter, then serve the app over HTTPS on your net
 
 ```sh
 mkdir -p .cache/dev-cert
-openssl req -x509 -newkey rsa:2048 -nodes -days 365 -subj "/CN=Spider V Control dev" \
+openssl req -x509 -newkey rsa:2048 -nodes -days 365 -subj "/CN=Spider V Web Control dev" \
   -addext "subjectAltName=IP:<your PC's LAN IP>,DNS:localhost" \
   -keyout .cache/dev-cert/key.pem -out .cache/dev-cert/cert.pem
 cd app && bun run dev:phone

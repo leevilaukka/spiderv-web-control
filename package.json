@@ -1,5 +1,5 @@
 {
-  "name": "spiderv-control",
+  "name": "spiderv-web-control",
   "private": true,
   "type": "module",
   "scripts": {

@@ -235,7 +235,7 @@ export function toToneFile(preset: Preset, st: SymbolTable, device?: number, fir
       meta: {
         name: preset.name,
         author: '',
-        application: 'Spider V Control',
+        application: 'Spider V Web Control',
         modifieddate: Math.floor(Date.now() / 1000),
         appversion: 1,
       },

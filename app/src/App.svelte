@@ -31,7 +31,7 @@
 {#if amp.status !== 'ready'}
   <main class="connect">
     <div class="card">
-      <h1>Spider V Control</h1>
+      <h1>Spider V Web Control</h1>
       <p>Edit tones on a Line 6 Spider V amp over USB, right from the browser.</p>
       <ol class="steps">
         <li>Connect the amp to this computer with a USB cable and switch it on.</li>

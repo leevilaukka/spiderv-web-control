@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "spiderv-control",
+      "name": "spiderv-web-control",
       "devDependencies": {
         "@types/bun": "^1.4.3",
       },
