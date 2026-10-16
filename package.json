@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "cd app && bun run dev",
     "build": "cd app && bun run build",
+    "build:exe": "bun run build && bun tools/build-exe.ts",
     "check": "cd app && bun run check",
     "test": "bun test",
     "cli": "bun tools/spiderv-cli.ts"
