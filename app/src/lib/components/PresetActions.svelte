@@ -29,7 +29,7 @@
       </button>
       <button class="item" role="menuitem" disabled={busy} onclick={() => { close(); amp.exportTone(); }}>
         Export tone
-        <small>Download the current tone as .svl6p</small>
+        <small>Download the current tone as .svl6p, with its shortcuts and channels</small>
       </button>
       <button class="item" role="menuitem" disabled={busy} onclick={() => { close(); amp.backupPresets(); }}>
         Back up all presets

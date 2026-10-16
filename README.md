@@ -25,7 +25,8 @@ Tested with a Spider V 20 MkII on firmware 2.0.1.
     every preset's shortcuts and channels, the controls and MIDI pedal setup, and the tone assistant's
     provider, models and recent tones. API keys stay out of the file; an import can be undone
 - **Import tone files** (`.svl6p` from Spider V Remote, the JSON "version 5" format of
-  Line 6's Spider Remote apps, or raw preset dumps) via the button or drag-and-drop, and **export** the current tone as `.svl6p`
+  Line 6's Spider Remote apps, or raw preset dumps) via the button or drag-and-drop, and **export** the current tone as `.svl6p`. Tones exported here
+  carry their shortcuts and channels A/B, which come back on import
 - **Save** the current tone to any preset slot (with a new name), with one-click undo,
   and **back up** all presets to a file. An imported tone saves under the name and
   CustomTone id from its file

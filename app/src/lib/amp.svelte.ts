@@ -6,9 +6,9 @@ import { Hub } from './protocol/hub';
 import { RemoteTransport } from './protocol/remote';
 import { catalogStore } from './catalog.svelte';
 import { type Control, type Slot, MICS, buildChain, splitCab } from './tone';
-import { type ToneFile, applyImport, planImport, readToneFile, toToneFile } from './presetfile';
+import { type ToneFile, TONE_EXTRAS_KEY, applyImport, planImport, readToneFile, toToneFile } from './presetfile';
 import type { Shortcut } from './shortcuts';
-import { type Channels, type PresetExtras, otherChannel, parsePresetExtras, pickGroups, switchTone } from './channels';
+import { type Channels, type PresetExtras, otherChannel, parsePresetExtras, pickGroups, readExtras, switchTone } from './channels';
 import { type Arrangement, arrangedTone } from './arrange';
 import { download } from './download';
 
@@ -491,11 +491,25 @@ export class Amp {
     this.notice = null;
     try {
       const bytes = [...new Uint8Array(await file.arrayBuffer())];
-      const { plan, applied, failed, refreshError } = await this.applyTone(readToneFile(bytes, c.symbols), file.name);
+      const tone = readToneFile(bytes, c.symbols);
+      const { plan, applied, failed, refreshError } = await this.applyTone(tone, file.name);
+      // Shortcuts and channels saved with the tone by this app come along;
+      // a tone without them keeps the current ones, as before.
+      const extras = tone[TONE_EXTRAS_KEY] ? readExtras(tone[TONE_EXTRAS_KEY]) : null;
+      if (extras) {
+        this.shortcuts = extras.shortcuts;
+        this.channels = extras.channels;
+        this.channelsEdited = !!extras.channels;
+      }
+      const carried = [
+        ...(extras?.channels ? [`channels A/B (${extras.channels.active} active)`] : []),
+        ...(extras?.shortcuts.length ? [`${extras.shortcuts.length} shortcut${extras.shortcuts.length === 1 ? '' : 's'}`] : []),
+      ];
       this.notice = {
         kind: failed.length || refreshError ? 'error' : 'ok',
         text: `Loaded “${plan.name}”${plan.author ? ` by ${plan.author}` : ''} into the edit buffer: ${applied} settings applied` +
           (plan.skipped.length ? `, ${plan.skipped.length} not supported` : '') + (failed.length ? `, ${failed.length} failed` : '') +
+          (carried.length ? `, with ${carried.join(' and ')}` : '') +
           '. Use Save to store it with the name from the file, or pick a preset to discard it.',
         details: [
           ...(refreshError ? [`Couldn't re-read the tone afterwards (${refreshError}); press Refresh.`] : []),
@@ -616,11 +630,17 @@ export class Amp {
     }
   }
 
-  // Downloads the current tone as a Spider V Remote tone file (.svl6p).
+  // Downloads the current tone as a Spider V Remote tone file (.svl6p), with
+  // its shortcuts and channels.
   async exportTone() {
     if (!this.client?.symbols) return;
     try {
       const tone = await this.currentTone();
+      // An unsaved import keeps its name; the amp still has the slot's.
+      if (this.imported) Object.assign(tone.data.meta, { name: this.imported.name, author: this.imported.author });
+      if (this.shortcuts.length || this.channels) {
+        tone[TONE_EXTRAS_KEY] = $state.snapshot({ shortcuts: this.shortcuts, channels: this.channels });
+      }
       download(JSON.stringify(tone), `${(tone.data.meta.name || 'tone').replace(/[^\w\- ]+/g, '_').trim()}.svl6p`);
     } catch (e) {
       this.notice = { kind: 'error', text: `Export failed: ${(e as Error).message}`, details: [] };

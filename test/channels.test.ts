@@ -5,7 +5,7 @@ import session from './fixtures/spiderv20-mkii-session.json';
 import { SpiderV } from '../app/src/lib/protocol/client';
 import { MockTransport } from '../app/src/lib/protocol/mock';
 import { applyImport, planImport, toToneFile } from '../app/src/lib/presetfile';
-import { completeGroups, parsePresetExtras, pickGroups, switchTone } from '../app/src/lib/channels';
+import { completeGroups, parsePresetExtras, pickGroups, readExtras, switchTone } from '../app/src/lib/channels';
 
 async function connect() {
   const mock = new MockTransport(session);
@@ -83,4 +83,13 @@ test('stored extras are read back per preset, including the older shortcut-only 
   expect(parsePresetExtras('[1]')).toEqual({});
   expect(parsePresetExtras('not json')).toEqual({});
   expect(parsePresetExtras(null)).toEqual({});
+});
+
+test("a tone file's shortcuts and channels read back, dropping what doesn't fit", () => {
+  const channels = { groups: ['amp', 'nope'], active: 'B', other: { amp: { '@model': 'DoubleVerb', Drive: 0.3 }, nope: {} } };
+  expect(readExtras({ shortcuts: 'x', channels })).toEqual({
+    shortcuts: [],
+    channels: { groups: ['amp'], active: 'B', other: { amp: { '@model': 'DoubleVerb', Drive: 0.3 } } },
+  });
+  expect(readExtras(null)).toEqual({ shortcuts: [], channels: null });
 });

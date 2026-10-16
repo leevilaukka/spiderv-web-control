@@ -10,6 +10,7 @@ import type { SpiderV } from './protocol/client';
 import { MICS, catalog, splitCab } from './tone';
 
 export type ToneGroup = Record<string, number | string | boolean>;
+export const TONE_EXTRAS_KEY = 'spiderv-web-control';
 export type ToneFile = {
   version: 5;
   schema?: 'L6Preset';
@@ -19,6 +20,9 @@ export type ToneFile = {
     device_version?: number;
     tone: Record<string, ToneGroup>;
   };
+  // This app's shortcuts and channels of the tone (channels.ts), outside
+  // Line 6's part of the file.
+  [TONE_EXTRAS_KEY]?: unknown;
 };
 
 // File group -> amp block, and the prefix of its GuitarProc controls
