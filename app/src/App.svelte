@@ -84,7 +84,7 @@
       </div>
       {#if !midi}
         <p class="error" role="alert">
-          This browser doesn't support Web MIDI. Use Chromium or Google Chrome, or control an amp connected to another computer below.
+          This browser doesn't support Web MIDI. Use Chrome, Chromium or Firefox, or control an amp connected to another computer below.
         </p>
       {/if}
       {#if amp.error}

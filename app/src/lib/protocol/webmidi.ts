@@ -17,7 +17,7 @@ export class WebMidiTransport implements Transport {
   static supported() { return typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator; }
 
   static async connect(): Promise<WebMidiTransport> {
-    if (!WebMidiTransport.supported()) throw new Error('This browser has no Web MIDI. Use Chromium or Chrome.');
+    if (!WebMidiTransport.supported()) throw new Error('This browser has no Web MIDI. Use Chrome, Chromium or Firefox.');
     let access: MIDIAccess;
     try {
       access = await navigator.requestMIDIAccess({ sysex: true });

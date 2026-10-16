@@ -38,7 +38,7 @@ The protocol is documented in [PROTOCOL.md](PROTOCOL.md).
 
 ## Run it
 
-Requires [Bun](https://bun.sh) and Chromium or Chrome (for Web MIDI).
+Requires [Bun](https://bun.sh) and a browser with Web MIDI: Chrome, Chromium or Firefox.
 
 ```sh
 cd app
@@ -47,7 +47,7 @@ bun run dev
 ```
 
 Open http://localhost:5173, connect the amp over USB, click **Connect**, and allow
-MIDI (with SysEx) access. Use `?demo` or **Try the demo** to run without an amp.
+MIDI (with SysEx) access; Firefox asks to add a site permission add-on for it. Use `?demo` or **Try the demo** to run without an amp.
 Then load the [model catalog](#model-catalog) once, for model names and model changes.
 
 Edits and imported tones go to the amp's edit buffer. **Save…** writes the edit buffer
