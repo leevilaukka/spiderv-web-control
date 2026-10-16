@@ -61,17 +61,17 @@ test('refuses invalid slots and data that is not a preset', async () => {
 
 test('saves an imported tone file under its own name and CustomTone id', async () => {
   const amp = await connect();
-  const bytes = [...readFileSync(new URL('./fixtures/customtone-do-i-wanna-know.svl6p', import.meta.url))];
+  const bytes = [...readFileSync(new URL('./fixtures/test-tone-plexi.svl6p', import.meta.url))];
   const plan = planImport(readToneFile(bytes, amp.symbols!), amp.symbols!, await amp.readPreset());
   await applyImport(amp, plan);
-  expect(plan.tnid).toBe(2886501);
+  expect(plan.tnid).toBe(1000042);
 
   await amp.savePreset(20, { name: plan.name, label: plan.label, tnid: plan.tnid });
-  expect(await amp.presetName(20)).toBe('A. MONKEYS do i wanna  know'); // 27 chars, kept whole
+  expect(await amp.presetName(20)).toBe('Test Tone:  Plexi Tube Drive'); // 28 chars, double space kept
   const saved = await amp.readPreset(20);
-  expect(saved.header[PresetKey.ToneIdLow]).toBe(2886501);
+  expect(saved.header[PresetKey.ToneIdLow]).toBe(1000042);
   expect(saved.header[PresetKey.ToneIdHigh]).toBe(0);
   expect(saved.header[PresetKey.Label]).toBe('Clean'); // the file has no label, so it is kept
   const ampBlock = saved.tone!.children.find((b) => b.id === amp.symbols!.id('Amp'))!;
-  expect(amp.symbols!.name(ampBlock.model)).toBe('Hiway100');
+  expect(amp.symbols!.name(ampBlock.model)).toBe('BritPlexiLead100');
 });

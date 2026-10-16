@@ -154,13 +154,9 @@ until the tab (sometimes the whole browser) is closed, even after **Disconnect**
 bun test
 ```
 
-`test/fixtures/spiderv30-remote-capture.txt` is SysEx extracted with
-`tools/pcap2sysex.py` from the USB capture in
-[stric9r/Line6-FBV3-Clone](https://github.com/stric9r/Line6-FBV3-Clone).
-`test/fixtures/spiderv20-mkii-session.json` was recorded from a real amp with
-`bun tools/spiderv-cli.ts record`. It also powers demo mode.
-`test/fixtures/line6-arachnid-rhythm.json` is the sample tone shipped in the Spider Remote app;
-`test/fixtures/customtone-do-i-wanna-know.svl6p` is a CustomTone download (author MATOUK).
+The fixtures in `test/fixtures` are listed under [Third-party material](#third-party-material).
+`test/fixtures/test-tone-plexi.svl6p` is a tone made for the tests, laid out exactly like a file
+saved by Spider V Remote.
 
 ## Model catalog
 
@@ -171,5 +167,23 @@ from the assets of Line 6's *Spider Remote* Android app:
 unzip -o SpiderRemote.apk 'assets/*' -d /tmp/spider-apk
 bun tools/extract-catalog.ts /tmp/spider-apk/assets
 ```
+
+## License
+
+The code is released under the [MIT License](LICENSE). The material below comes from elsewhere,
+is not covered by that license and stays with its owners.
+
+### Third-party material
+
+| File | What it is | Source |
+|---|---|---|
+| `app/src/lib/catalog.json` | Model and parameter names, ranges and defaults | Assets of Line 6's *Spider Remote* app; regenerate with `tools/extract-catalog.ts` |
+| `test/fixtures/spiderv20-mkii-session.json` | Replies of a Spider V 20 MkII (fw 2.0.1): its symbol table, the names of its 128 presets and one preset. Used by the tests and demo mode | Recorded from the author's amp with `bun tools/spiderv-cli.ts record` |
+| `test/fixtures/line6-arachnid-rhythm.json` | The sample tone shipped in the app | Line 6 *Spider Remote* app |
+| `test/fixtures/spiderv30-remote-capture.txt` | SysEx between Spider V Remote and a Spider V 30, extracted with `tools/pcap2sysex.py` | USB capture in [stric9r/Line6-FBV3-Clone](https://github.com/stric9r/Line6-FBV3-Clone) (GPL-3.0) |
+
+They are included to make the amp's protocol interoperable with free software, the way the
+reverse engineering in [PROTOCOL.md](PROTOCOL.md) is. If you own any of it and want it removed,
+open an issue.
 
 Line 6 and Spider V are trademarks of Yamaha Guitar Group. This project isn't affiliated with them.

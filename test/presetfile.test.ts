@@ -74,27 +74,27 @@ test('reads raw preset dumps and rejects other files', async () => {
   expect(() => readToneFile([...new TextEncoder().encode('{nope')], amp.symbols!)).toThrow(/Not a valid tone file/);
 });
 
-test('imports a .svl6p file saved by Spider V Remote / CustomTone', async () => {
+test('imports a .svl6p file in the format Spider V Remote / CustomTone saves', async () => {
   const amp = await connect();
-  const bytes = [...readFileSync(new URL('./fixtures/customtone-do-i-wanna-know.svl6p', import.meta.url))];
+  const bytes = [...readFileSync(new URL('./fixtures/test-tone-plexi.svl6p', import.meta.url))];
   const plan = planImport(readToneFile(bytes, amp.symbols!), amp.symbols!, await amp.readPreset());
-  expect(plan.author).toBe('MATOUK');
+  expect(plan.author).toBe('spiderv-web-control');
   expect(await applyImport(amp, plan)).toEqual([]);
 
   const chain = buildChain(await amp.readPreset(), amp.symbols!);
   const slot = (s: string) => chain.find((x) => x.sym === s)!;
-  expect(slot('Amp').modelSym).toBe('Hiway100');
-  expect(slot('FX1').modelSym).toBe('KillerZ');
-  expect(slot('FX1').params.find((p) => p.label === 'Mid Freq')!.value).toBeCloseTo(1);
+  expect(slot('Amp').modelSym).toBe('BritPlexiLead100');
+  expect(slot('FX1').modelSym).toBe('TubeDrive');
+  expect(slot('FX1').params.find((p) => p.label === 'Treble')!.value).toBeCloseTo(0.62);
   expect(slot('FX1').enable!.value).toBe(1);    // "@enabled": true
   expect(slot('FX3').enable!.value).toBe(0);    // "@enabled": false
-  expect(slot('StudioCab').modelSym).toBe('4x12BritV30Studio421');
-  expect(slot('StudioCab').extras.find((p) => p.label === 'Early reflections')!.value).toBeCloseTo(0.422998);
+  expect(slot('StudioCab').modelSym).toBe('2x12BlackfaceStudioU67'); // "@mic": 3
+  expect(slot('StudioCab').extras.find((p) => p.label === 'Early reflections')!.value).toBeCloseTo(0.315);
 
   // Exporting writes the same shape back.
   const out = toToneFile(await amp.readPreset(), amp.symbols!, 0x220005, 0x02010030);
   expect(out.schema).toBe('L6Preset');
   expect(out.data.device_version).toBe(0x02010000);
   expect(out.data.tone.fx1['@enabled']).toBe(true);
-  expect(out.data.tone.fx1['Mid Amt']).toBeCloseTo(0.565098);
+  expect(out.data.tone.fx1['Drive']).toBeCloseTo(0.71);
 });
