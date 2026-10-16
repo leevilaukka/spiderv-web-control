@@ -7,20 +7,26 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
+    "preview:remote": "vite preview --host",
+    "start": "bun server.ts",
     "check": "svelte-check --tsconfig ./tsconfig.app.json && tsc -p tsconfig.node.json",
-    "dev:phone": "HTTPS=1 vite --host --port 5175"
+    "dev:phone": "HTTPS=1 vite --host --port 5175",
+    "dev:remote": "vite --host"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tsconfig/svelte": "^5.0.8",
     "@types/node": "^24.13.3",
+    "@types/ws": "^8.18.2",
     "svelte": "^5.57.0",
     "svelte-check": "^4.7.6",
     "typescript": "~6.0.2",
-    "vite": "^8.3.0"
+    "vite": "^8.3.0",
+    "ws": "^8.22.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
-    "@google/genai": "^2.30.0"
+    "@google/genai": "^2.30.0",
+    "qrcode-generator": "^2.0.4"
   }
 }

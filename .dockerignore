@@ -1,0 +1,7 @@
+# Only what the image build needs; everything else (preset backups, the dev
+# certificate in .cache, node_modules) stays out of the build context.
+*
+!app
+app/node_modules
+app/dist
+!test/fixtures/spiderv20-mkii-session.json

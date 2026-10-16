@@ -16,6 +16,7 @@ Tested with a Spider V 20 MkII on firmware 2.0.1.
   - **Channels A/B**: two setups of the amp, cab or any blocks in one preset, switched with one key,
     like a switched dual amp or two-way chain (the Spider V has one amp, so they take turns)
   - **Stage view**: big footswitch buttons; memory mode picks presets in banks of four, manual mode switches blocks
+    (long-press or right-click a block to turn its knobs without leaving the stage view)
   - **MIDI pedals**: program change selects presets, footswitches trigger shortcuts or the channel switch,
     and an expression pedal sweeps a shortcut's knobs
   - The tone assistant can set up shortcuts and channels too
@@ -27,6 +28,8 @@ Tested with a Spider V 20 MkII on firmware 2.0.1.
 - **Tone assistant**: describe a sound and an AI model (Claude or Gemini, with your own API key)
   builds it on the amp from the model catalog, then refines it as you ask
 - **Listen**: play the amp's USB audio output through the browser
+- **Remote control from a phone**: a phone on the same Wi-Fi uses the amp plugged into the computer
+  (scan a QR code), with the full app; shortcuts and channels stay in step on both. Works on iPhones too
 - Protocol console for sending raw commands
 - Demo mode with a simulated amp
 
@@ -51,7 +54,64 @@ you can **Undo**, which writes the slot's previous contents back. Consider
 **Back up all presets** first. Tone-file settings with no counterpart on the amp
 (tempo sync flags, expression pedal assignment, speaker mode) are listed as not supported.
 
-## On a phone (Android)
+## Run it in a container
+
+The image holds the built app and a small server for it, including the phone relay. The amp
+stays connected to the computer whose browser opens the app (Web MIDI), so the container needs no
+USB access.
+
+```sh
+docker compose up -d --build      # → http://localhost:8080
+```
+
+`compose.yaml` uses host networking (Linux) so the remote-control QR code shows the machine's LAN
+address. For HTTPS (phones need it for Web MIDI and to keep the screen on), uncomment `CERT_DIR`
+and the volume in `compose.yaml` to mount a folder with `cert.pem` and `key.pem`, such as the dev
+certificate below, and open `https://localhost:8080`. The key must be readable by uid 1000.
+
+Without compose:
+
+```sh
+docker build -t spiderv-web-control .
+docker run -d --network host spiderv-web-control
+docker run -d --network host -e CERT_DIR=/certs -v "$PWD/.cache/dev-cert:/certs:ro" spiderv-web-control
+```
+
+With bridge networking (`-p 8080:8080`, e.g. on Docker Desktop), the container can't see the
+LAN address; pass it with `-e PUBLIC_ADDRESSES=192.168.1.20`. Other settings: `PORT`, `HOST`.
+The same server runs without Docker: `cd app && bun run build && bun run start`.
+
+## Remote control from a phone
+
+The amp stays plugged into the computer; the phone (any browser, iPhone included) talks to it
+through the computer's browser tab. Start the app so other devices on the network can reach it:
+
+```sh
+cd app
+bun run dev:remote        # or, for a built app: bun run build && bun run preview:remote
+```
+
+Open http://localhost:5173 on the computer and connect to the amp. In the amp menu, choose
+**Remote control from a phone…**, turn on sharing and scan the QR code with the phone (or open
+the link, or enter the pairing code on the phone's start page). The computer's menu shows how many
+phones are connected; keep its tab open. Sharing starts again by itself the next time that browser
+connects, with the same code, so a bookmark on the phone keeps working; **New code** locks out
+phones that have the old one. Anyone on the network with the code can control the amp while sharing is on.
+
+The phone keeps its screen on while it is a remote (**Keep screen on** in its amp menu turns
+that off). Browsers allow that properly only on HTTPS pages; over plain http the app falls back
+to a silent looping video, which not every phone honours. For a screen that reliably stays on,
+serve the app over HTTPS with `bun run dev:phone` (see below for the certificate), open
+`https://localhost:5175` on the computer, and accept the certificate warning once on each device.
+
+How it works: the dev server relays WebSocket messages between the computer's tab and the phones
+(`app/remote-relay.ts`). Each phone runs the whole app on a port of the computer's hub
+(`app/src/lib/protocol/hub.ts`), which forwards everyone's requests to the amp one at a time per
+channel and routes each reply back to whoever asked. The hub answers handshakes and symbol table
+requests itself, and tells the other browsers about knob changes, since the amp doesn't report
+changes made over USB. Shortcuts and channels (normally kept in one browser) are synced between them.
+
+## Directly on a phone (Android)
 
 Web MIDI needs Chrome on Android (iOS browsers don't support it) and HTTPS. Plug the amp
 into the phone with a USB OTG adapter, then serve the app over HTTPS on your network:

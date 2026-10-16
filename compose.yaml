@@ -1,0 +1,23 @@
+# docker compose up -d --build   →  http://localhost:8080
+#
+# Host networking lets the remote-control QR code show this machine's real
+# LAN address (Linux only). On Docker Desktop, use the bridge variant below.
+services:
+  spiderv:
+    build: .
+    image: spiderv-web-control
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      PORT: "8080"
+      # HTTPS, which phones need for Web MIDI and for keeping the screen on:
+      # mount a folder with cert.pem and key.pem (see README) and uncomment.
+      # CERT_DIR: /certs
+    # volumes:
+    #   - ./.cache/dev-cert:/certs:ro
+
+    # Bridge networking instead of host: tell it the address phones should use.
+    # network_mode: bridge
+    # ports: ["8080:8080"]
+    # environment:
+    #   PUBLIC_ADDRESSES: 192.168.1.20

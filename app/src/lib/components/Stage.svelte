@@ -8,6 +8,7 @@
   import { keyLabel } from '../keys.svelte';
   import { groupColor } from '../colors';
   import Shortcuts from './Shortcuts.svelte';
+  import SlotEditor from './SlotEditor.svelte';
 
   const LETTERS = 'ABCD';
   const banks = $derived(Math.max(1, Math.ceil(amp.presets.length / BANK_SIZE)));
@@ -17,6 +18,63 @@
   const step = (d: number) => (bank = (bank + d + banks) % banks);
   const codeOf = Object.fromEntries(Object.entries(BLOCK_KEYS).map(([code, sym]) => [sym, code]));
   const blocks = $derived(amp.chain.filter((s) => s.enable));
+
+  // Long-pressing a block (or right-clicking it) opens its knobs; a tap
+  // still switches it. Looked up by name, as re-reading the tone replaces slots.
+  const LONG_PRESS_MS = 500;
+  let editing = $state<string | null>(null);
+  const editSlot = $derived(editing ? amp.chain.find((s) => s.sym === editing) : undefined);
+  let press: { timer: ReturnType<typeof setTimeout>; x: number; y: number } | null = null;
+  let swallowClick = false;
+  let sheet: HTMLDialogElement | undefined = $state();
+  let downOnBackdrop = false;
+
+  function openEditor(sym: string) {
+    editing = sym;
+    navigator.vibrate?.(15);
+  }
+
+  function pressStart(e: PointerEvent, sym: string) {
+    swallowClick = false;
+    if (e.button !== 0) return;
+    cancelPress();
+    press = {
+      x: e.clientX,
+      y: e.clientY,
+      timer: setTimeout(() => {
+        press = null;
+        swallowClick = true; // the release that follows isn't a tap
+        openEditor(sym);
+      }, LONG_PRESS_MS),
+    };
+  }
+
+  // Moving the finger (scrolling) isn't a long press.
+  function pressMove(e: PointerEvent) {
+    if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 10) cancelPress();
+  }
+
+  function cancelPress() {
+    if (press) clearTimeout(press.timer);
+    press = null;
+  }
+
+  function blockClick(slot: (typeof blocks)[number]) {
+    if (swallowClick) { swallowClick = false; return; }
+    amp.toggle(slot);
+  }
+
+  function blockMenu(e: MouseEvent, sym: string) {
+    e.preventDefault();
+    cancelPress();
+    if (editing !== sym) openEditor(sym);
+  }
+
+  $effect(() => {
+    if (!sheet) return;
+    if (editSlot && !sheet.open) sheet.showModal();
+    else if (!editSlot && sheet.open) sheet.close();
+  });
 
   // The page behind doesn't scroll while the stage view covers it.
   $effect(() => {
@@ -85,7 +143,20 @@
       <section class="blocks" aria-label="Blocks">
         {#each blocks as slot (slot.sym)}
           {@const on = !!slot.enable?.value}
-          <button class="block" class:on style:--c={groupColor(slot.group)} aria-pressed={on} onclick={() => amp.toggle(slot)}>
+          <button
+            class="block"
+            class:on
+            style:--c={groupColor(slot.group)}
+            aria-pressed={on}
+            title="Tap to switch, long-press for its knobs"
+            onclick={() => blockClick(slot)}
+            onpointerdown={(e) => pressStart(e, slot.sym)}
+            onpointermove={pressMove}
+            onpointerup={cancelPress}
+            onpointercancel={cancelPress}
+            onpointerleave={cancelPress}
+            oncontextmenu={(e) => blockMenu(e, slot.sym)}
+          >
             <span class="led" aria-hidden="true"></span>
             <span class="bname">{slot.label}</span>
             <span class="model">{slot.shortName}</span>
@@ -93,9 +164,29 @@
           </button>
         {/each}
       </section>
+      <p class="hint">Long-press a block (or right-click it) to turn its knobs.</p>
     {/if}
 
     <Shortcuts big />
+
+    <dialog
+      bind:this={sheet}
+      class="sheet"
+      aria-label="{editSlot?.label ?? ''} settings"
+      onclose={() => (editing = null)}
+      onpointerdown={(e) => (downOnBackdrop = e.target === sheet)}
+      onclick={(e) => { if (downOnBackdrop && e.target === sheet) editing = null; }}
+    >
+      {#if editSlot}
+        <div class="sheet-bar">
+          <span>{editSlot.label}</span>
+          <button class="done" onclick={() => (editing = null)}>Done</button>
+        </div>
+        <div class="sheet-body">
+          <SlotEditor slot={editSlot} />
+        </div>
+      {/if}
+    </dialog>
   </div>
 {/if}
 
@@ -193,9 +284,60 @@
   .bname { font-size: 18px; font-weight: 700; }
   .model { font-size: 13px; color: var(--muted); }
   .block kbd { position: absolute; right: 12px; bottom: 12px; }
+  /* No text selection or iOS callout on a long press. */
+  .block { -webkit-touch-callout: none; user-select: none; -webkit-user-select: none; }
+  .hint { margin: -10px 2px 0; font-size: 13px; color: var(--muted); }
+
+  .sheet {
+    width: min(820px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    padding: 0;
+    color: var(--text);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    overflow: auto;
+    overscroll-behavior: contain;
+  }
+  .sheet::backdrop { background: rgb(0 0 0 / 0.6); }
+  /* Stays at the top while the knobs scroll, so Done is always one tap away. */
+  .sheet-bar {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+  }
+  .sheet-bar span { font-size: 13px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .sheet-body { padding: 14px; }
+  .sheet-body :global(.editor) { margin: 0; }
+  .done {
+    padding: 8px 20px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+  }
 
   @media (max-width: 760px) {
     .stage { padding: 14px 16px 24px; gap: 16px; }
+    /* A bottom sheet, within thumb reach. */
+    .sheet {
+      width: 100vw;
+      max-width: 100vw;
+      max-height: 88vh;
+      margin: auto 0 0;
+      border-radius: 14px 14px 0 0;
+      border-bottom: 0;
+    }
+    .sheet-bar { padding: 10px 12px; }
+    .sheet-body { padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); }
     .presets { grid-template-columns: repeat(2, 1fr); }
     .bank { gap: 8px; }
     .presets { gap: 8px; }

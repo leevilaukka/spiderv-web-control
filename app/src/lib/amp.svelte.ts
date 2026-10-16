@@ -2,6 +2,8 @@
 import { SpiderV, type LogEntry, type Transport } from './protocol/client';
 import { type Bytes, type ParamChange, MsgType, i32, le32 } from './protocol/codec';
 import { WebMidiTransport } from './protocol/webmidi';
+import { Hub } from './protocol/hub';
+import { RemoteTransport } from './protocol/remote';
 import { type Control, type Slot, MICS, buildChain, splitCab } from './tone';
 import { type ToneFile, applyImport, planImport, readToneFile, toToneFile } from './presetfile';
 import type { Shortcut } from './shortcuts';
@@ -24,6 +26,19 @@ const saveCachedSymbols = (b: Bytes) => {
 };
 const loadExtras = () => {
   try { return parsePresetExtras(localStorage.getItem(EXTRAS_KEY)); } catch { return {}; }
+};
+
+// Where the amp connection comes from: Web MIDI, the simulated amp, or
+// another browser that shares its amp (remote control, by pairing code).
+export type Source = 'midi' | 'demo' | { remote: string };
+
+// What the browsers sharing an amp keep in step (remote.svelte.ts): the
+// stored shortcuts and channels of every preset, and those of the tone in
+// the edit buffer.
+export type SharedState = {
+  current: number;
+  extras: Record<number, PresetExtras>;
+  live: { shortcuts: Shortcut[]; channels: Channels | null; channelsEdited: boolean; imported: Amp['imported'] };
 };
 
 export class Amp {
@@ -55,7 +70,16 @@ export class Amp {
   channelsEdited = $state(false);
   switching = $state(false);
   arranging = $state(false);
-  private storedExtras = loadExtras();
+  private storedExtras = $state<Record<number, PresetExtras>>(loadExtras());
+  // Set while this page is a remote control for another browser's amp.
+  remoteCode = $state('');
+  // The shared amp connection of this page (not a remote), which phones join.
+  hub: Hub | null = null;
+  // Called after a preset slot was written, so remotes can re-read its name.
+  presetWritten: (index: number) => void = () => {};
+  // Edit-buffer state from another browser for a preset this page hasn't
+  // caught up with yet; used when it does.
+  private pendingLive: SharedState | null = null;
 
   client: SpiderV | null = null;
   private pollTimer: ReturnType<typeof setInterval> | null = null;
@@ -66,26 +90,35 @@ export class Amp {
 
   get demo() { return this.label.startsWith('Demo'); }
 
-  async connect(demo = false) {
+  async connect(source: Source = 'midi') {
     this.status = 'connecting';
     this.error = '';
     // A dropped reply during startup is rare but possible; one retry fixes it.
     for (let attempt = 1; attempt <= 2; attempt++) {
-      if (await this.tryConnect(demo, attempt === 2)) return;
+      if (await this.tryConnect(source, attempt === 2)) return;
     }
   }
 
-  private async tryConnect(demo: boolean, last: boolean): Promise<boolean> {
+  private async tryConnect(source: Source, last: boolean): Promise<boolean> {
+    const demo = source === 'demo';
+    let hub: Hub | null = null;
     try {
       let t: Transport;
-      if (demo) {
-        const [{ MockTransport }, session] = await Promise.all([
-          import('./protocol/mock'),
-          import('../../../test/fixtures/spiderv20-mkii-session.json'),
-        ]);
-        t = new MockTransport(session.default);
+      if (typeof source === 'object') {
+        t = await RemoteTransport.connect(source.remote);
       } else {
-        t = await WebMidiTransport.connect();
+        if (demo) {
+          const [{ MockTransport }, session] = await Promise.all([
+            import('./protocol/mock'),
+            import('../../../test/fixtures/spiderv20-mkii-session.json'),
+          ]);
+          t = new MockTransport(session.default);
+        } else {
+          t = await WebMidiTransport.connect();
+        }
+        // Phones can join later through the hub.
+        hub = new Hub(t);
+        t = hub.port(t.label, { closesAmp: true });
       }
       const client = new SpiderV(t, demo ? null : loadCachedSymbols());
       client.on('log', (e) => {
@@ -94,14 +127,18 @@ export class Amp {
       });
       client.on('param', (c) => this.onParamChanged(c));
       client.on('event', () => this.scheduleResync());
-      client.on('disconnect', () => this.disconnected('The amp was disconnected.'));
+      client.on('disconnect', (e) => this.disconnected((e as Error | undefined)?.message || 'The amp was disconnected.'));
       this.client = client;
       await client.connect();
-      if (!demo) saveCachedSymbols(client.symbols!.bytes);
+      if (!demo && !t.label.startsWith('Demo')) saveCachedSymbols(client.symbols!.bytes);
+      if (hub) hub.symbols = client.symbols!.bytes;
+      this.hub = hub;
+      this.remoteCode = typeof source === 'object' ? source.remote : '';
       this.label = t.label;
       this.firmware = client.info.L6Version ?? '';
       this.current = await client.currentPresetIndex();
       this.loadExtras();
+      if (t instanceof RemoteTransport && t.hello.state) this.applyShared(t.hello.state as SharedState);
       await this.refresh();
       this.status = 'ready';
       this.loadNames();
@@ -127,6 +164,8 @@ export class Amp {
     if (this.pollTimer) clearInterval(this.pollTimer);
     this.pollTimer = null;
     this.client = null;
+    this.hub = null;
+    this.pendingLive = null;
     this.status = msg ? 'error' : 'idle';
     this.error = msg;
     this.chain = [];
@@ -135,12 +174,20 @@ export class Amp {
     this.channels = null;
   }
 
+  async reloadName(index: number) {
+    if (this.client && index >= 0 && index < this.presets.length) this.presets[index] = await this.client.presetName(index);
+  }
+
   private async loadNames() {
     const c = this.client!;
     const names: string[] = new Array(c.presetCount).fill('');
     this.presets = names;
-    for (let i = 0; i < c.presetCount && this.client === c; i++) {
-      this.presets[i] = await c.presetName(i);
+    try {
+      for (let i = 0; i < c.presetCount && this.client === c; i++) {
+        this.presets[i] = await c.presetName(i);
+      }
+    } catch (e) {
+      if (this.client === c) this.report(e);
     }
   }
 
@@ -367,10 +414,44 @@ export class Amp {
   }
 
   private loadExtras() {
-    const e = this.storedExtras[this.current];
-    this.shortcuts = structuredClone(e?.shortcuts ?? []);
-    this.channels = structuredClone(e?.channels ?? null);
+    const p = this.pendingLive;
+    this.pendingLive = null;
+    if (p?.current === this.current) return this.applyLive(p.live);
+    const e = $state.snapshot(this.storedExtras[this.current]);
+    this.shortcuts = e?.shortcuts ?? [];
+    this.channels = e?.channels ?? null;
     this.channelsEdited = false;
+  }
+
+  // ------------------------------------------------------------ sharing with remotes
+
+  shared(): SharedState {
+    return $state.snapshot({
+      current: this.current,
+      extras: this.storedExtras,
+      live: { shortcuts: this.shortcuts, channels: this.channels, channelsEdited: this.channelsEdited, imported: this.imported },
+    });
+  }
+
+  // Takes over another browser's state. Its edit-buffer part applies only
+  // when both show the same preset; otherwise it waits until this page has
+  // noticed the preset change too.
+  applyShared(s: SharedState) {
+    this.storedExtras = $state.snapshot(s.extras);
+    try { localStorage.setItem(EXTRAS_KEY, JSON.stringify(this.storedExtras)); } catch {}
+    if (s.current === this.current) {
+      this.pendingLive = null;
+      this.applyLive(s.live);
+    } else {
+      this.pendingLive = $state.snapshot(s);
+    }
+  }
+
+  private applyLive(l: SharedState['live']) {
+    this.shortcuts = $state.snapshot(l.shortcuts);
+    this.channels = $state.snapshot(l.channels);
+    this.channelsEdited = l.channelsEdited;
+    this.imported = $state.snapshot(l.imported);
   }
 
   private storeExtras(index: number, e: PresetExtras) {
@@ -461,6 +542,7 @@ export class Amp {
       await c.loadPreset(index);
       this.current = index;
       this.presets[index] = await c.presetName(index);
+      this.presetWritten(index);
       await this.refresh();
       this.notice = {
         kind: 'ok',
@@ -473,6 +555,7 @@ export class Amp {
           this.current = index;
           this.loadExtras();
           this.presets[index] = await c.presetName(index);
+          this.presetWritten(index);
           await this.refresh();
           this.notice = { kind: 'ok', text: `Restored the previous preset ${index + 1} “${this.presets[index]}”.`, details: [] };
         },

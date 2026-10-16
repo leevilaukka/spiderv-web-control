@@ -1,6 +1,7 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte'
 import { defineConfig } from 'vite'
 import { existsSync, readFileSync } from 'node:fs'
+import { remoteRelay } from './remote-relay.ts'
 
 // `bun run dev:phone` serves over HTTPS on the LAN so a phone can use Web MIDI
 // (browsers only allow it in secure contexts). Uses the self-signed cert in
@@ -12,7 +13,8 @@ const https = process.env.HTTPS && existsSync(new URL('cert.pem', certDir))
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [svelte()],
+  // remoteRelay: phones control the amp through the browser it is connected to.
+  plugins: [svelte(), remoteRelay()],
   server: {
     https,
     // Demo mode loads the recorded session from ../test/fixtures.

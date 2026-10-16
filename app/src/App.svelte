@@ -14,6 +14,7 @@
   import { controls } from './lib/controls.svelte';
   import { assistant } from './lib/assistant.svelte';
   import { WebMidiTransport } from './lib/protocol/webmidi';
+  import { normalizeCode, remote } from './lib/remote.svelte';
 
   const midi = WebMidiTransport.supported();
   const slot = $derived(amp.chain.find((s) => s.sym === amp.selected) ?? amp.chain[0]);
@@ -30,10 +31,42 @@
     if (file) amp.importTone(file);
   }
 
-  if (new URLSearchParams(location.search).has('demo')) amp.connect(true);
+  const params = new URLSearchParams(location.search);
+  // Opened from the QR code of a computer sharing its amp: be its remote.
+  const initialRemote = normalizeCode(params.get('remote') ?? '');
+  let remoteParam = $state(initialRemote);
+  let code = $state(initialRemote || remote.settings.lastJoined);
+  if (initialRemote) remote.join(initialRemote);
+  else if (params.has('demo')) amp.connect('demo');
+
+  // Phones drop the connection when the screen locks; reconnect on return.
+  function onVisible() {
+    if (document.visibilityState === 'visible' && remoteParam && amp.status === 'error') remote.join(remoteParam);
+  }
 </script>
 
-{#if amp.status !== 'ready'}
+<svelte:document onvisibilitychange={onVisible} />
+
+{#if amp.status !== 'ready' && remoteParam}
+  <main class="connect">
+    <div class="card">
+      <h1>Spider V Remote</h1>
+      <p>Controlling the amp connected to another computer, with pairing code <strong>{remoteParam}</strong>.</p>
+      {#if amp.status === 'connecting'}
+        <p>Connecting to the computer…</p>
+      {/if}
+      {#if amp.error}
+        <p class="error" role="alert">{amp.error}</p>
+      {/if}
+      <div class="buttons spaced">
+        <button class="primary" disabled={amp.status === 'connecting'} onclick={() => remote.join(remoteParam)}>
+          {amp.status === 'connecting' ? 'Connecting…' : amp.status === 'error' ? 'Reconnect' : 'Connect'}
+        </button>
+        <a class="button" href="./">Use this device's own amp instead</a>
+      </div>
+    </div>
+  </main>
+{:else if amp.status !== 'ready'}
   <main class="connect">
     <div class="card">
       <h1>Spider V Web Control</h1>
@@ -43,17 +76,38 @@
         <li>Click <strong>Connect</strong> and allow MIDI access (with SysEx) when asked.</li>
       </ol>
       <div class="buttons">
-        <button class="primary" disabled={!midi || amp.status === 'connecting'} onclick={() => amp.connect()}>
+        <button class="primary" disabled={!midi || amp.status === 'connecting'} onclick={() => amp.connect('midi')}>
           {amp.status === 'connecting' ? 'Connecting…' : 'Connect'}
         </button>
-        <button disabled={amp.status === 'connecting'} onclick={() => amp.connect(true)}>Try the demo</button>
+        <button disabled={amp.status === 'connecting'} onclick={() => amp.connect('demo')}>Try the demo</button>
       </div>
       {#if !midi}
-        <p class="error" role="alert">This browser doesn't support Web MIDI. Use Chromium or Google Chrome.</p>
+        <p class="error" role="alert">
+          This browser doesn't support Web MIDI. Use Chromium or Google Chrome, or control an amp connected to another computer below.
+        </p>
       {/if}
       {#if amp.error}
         <p class="error" role="alert">{amp.error}</p>
       {/if}
+      <form class="join" onsubmit={(e) => { e.preventDefault(); remoteParam = normalizeCode(code); remote.join(remoteParam); }}>
+        <h2>Remote control</h2>
+        <p>
+          Is the amp connected to another computer running this app? Turn on <em>Remote control from a phone</em> in its
+          amp menu, then scan the QR code or enter the pairing code here.
+        </p>
+        <div class="row">
+          <input
+            aria-label="Pairing code"
+            placeholder="Pairing code"
+            autocapitalize="characters"
+            autocomplete="off"
+            spellcheck="false"
+            maxlength="12"
+            bind:value={code}
+          />
+          <button type="submit" disabled={!normalizeCode(code) || amp.status === 'connecting'}>Join</button>
+        </div>
+      </form>
     </div>
   </main>
 {:else}
@@ -75,7 +129,7 @@
         <button class="assist" aria-expanded={assistant.open} onclick={() => (assistant.open = !assistant.open)}>
           <span aria-hidden="true">✦</span> Tone assistant
         </button>
-        <AudioMonitor />
+        {#if !amp.remoteCode}<AudioMonitor />{/if}
         <DeviceMenu />
       </div>
     </header>
@@ -146,6 +200,37 @@
     gap: 6px;
   }
   .buttons { display: flex; flex-wrap: wrap; gap: 10px; }
+  .buttons.spaced { margin-top: 18px; }
+  .join {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+  }
+  .join h2 { margin: 0 0 4px; font-size: 15px; }
+  .join p { font-size: 13px; margin-bottom: 12px; }
+  .join .row { display: flex; gap: 8px; }
+  .join input {
+    flex: 1;
+    min-width: 0;
+    font: 600 15px var(--mono);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text);
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 12px;
+  }
+  .join input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  a.button {
+    font-size: 14px;
+    color: var(--text);
+    text-decoration: none;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px 14px;
+  }
+  a.button:hover { border-color: var(--muted); }
   button {
     font: inherit;
     font-size: 14px;
