@@ -1,0 +1,67 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install
+        run: |
+          bun install --frozen-lockfile
+          cd app && bun install --frozen-lockfile
+
+      - name: Test
+        run: bun test
+
+      - name: Build the app
+        run: bun run build
+
+      # Bun cross-compiles every target from this one runner.
+      - name: Compile executables
+        run: bun tools/build-exe.ts bun-linux-x64 bun-linux-arm64 bun-windows-x64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spiderv-web-control-linux-x64
+          path: dist-exe/spiderv-web-control-linux-x64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spiderv-web-control-linux-arm64
+          path: dist-exe/spiderv-web-control-linux-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: spiderv-web-control-windows-x64
+          path: dist-exe/spiderv-web-control-windows-x64.exe
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist-exe
+          merge-multiple: true
+      - name: Attach executables to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh release create "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" -R "$GITHUB_REPOSITORY" --clobber dist-exe/*

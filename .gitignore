@@ -3,3 +3,4 @@ app/dist/
 .cache/
 backups/
 app/src/lib/catalog.json
+dist-exe/

@@ -83,6 +83,24 @@ With bridge networking (`-p 8080:8080`, e.g. on Docker Desktop), the container c
 LAN address; pass it with `-e PUBLIC_ADDRESSES=192.168.1.20`. Other settings: `PORT`, `HOST`.
 The same server runs without Docker: `cd app && bun run build && bun run start`.
 
+## Run the standalone executable
+
+Each build on GitHub (and each release) has executables of the same server with the app built in,
+for Linux (x64, arm64) and Windows (x64), so neither Bun nor Docker is needed. Run it and open
+http://localhost:8080; it takes the same settings (`PORT`, `HOST`, `CERT_DIR`, `PUBLIC_ADDRESSES`)
+as environment variables. On Linux, `chmod +x` it first; Windows may ask to let it through the
+firewall, which phones need for remote control.
+
+To build them yourself (Bun cross-compiles, so any machine can build all of them):
+
+```sh
+bun run build:exe                                             # for this machine
+bun run build && bun tools/build-exe.ts bun-linux-x64 bun-windows-x64
+```
+
+They land in `dist-exe/`. A catalog made with `tools/extract-catalog.ts` would be built in
+too, so keep such executables to yourself.
+
 ## Remote control from a phone
 
 The amp stays plugged into the computer; the phone (any browser, iPhone included) talks to it
