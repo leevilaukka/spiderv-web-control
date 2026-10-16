@@ -16,6 +16,7 @@
   import { assistant } from './lib/assistant.svelte';
   import { WebMidiTransport } from './lib/protocol/webmidi';
   import { normalizeCode, remote } from './lib/remote.svelte';
+  import { importFile } from './lib/settings.svelte';
 
   const midi = WebMidiTransport.supported();
   const slot = $derived(amp.chain.find((s) => s.sym === amp.selected) ?? amp.chain[0]);
@@ -29,7 +30,7 @@
     e.preventDefault();
     dragging = false;
     const file = e.dataTransfer?.files[0];
-    if (file) amp.importTone(file);
+    if (file) importFile(file);
   }
 
   const params = new URLSearchParams(location.search);

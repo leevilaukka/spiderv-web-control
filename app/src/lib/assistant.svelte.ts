@@ -23,12 +23,15 @@ const RECENT_MAX = 10;
 // can be brought back after a misclick or a preset change.
 export type RecentTone = { time: number; name: string; prompt: string; file: ToneFile };
 
+const parseRecent = (list: unknown): RecentTone[] =>
+  Array.isArray(list) ? list.filter((r) => r?.file?.version === 5 && r.file.data?.tone).slice(0, RECENT_MAX) : [];
+
 function loadRecent(): RecentTone[] {
-  try {
-    const list = JSON.parse(load(RECENT_KEY) || '[]');
-    return Array.isArray(list) ? list.filter((r) => r?.file?.version === 5 && r.file.data?.tone).slice(0, RECENT_MAX) : [];
-  } catch { return []; }
+  try { return parseRecent(JSON.parse(load(RECENT_KEY) || '[]')); } catch { return []; }
 }
+
+// What a settings file holds of the assistant; API keys stay in the browser.
+type AssistantSettings = { provider: ProviderId; models: Record<ProviderId, string>; recent: RecentTone[] };
 
 export type ChatItem =
   | { kind: 'user'; text: string }
@@ -208,6 +211,33 @@ class Assistant {
     store('spiderv.ai.provider', providerId);
     store(`spiderv.ai.model.${providerId}`, model);
     store(`spiderv.ai.key.${providerId}`, key);
+  }
+
+  get settings(): AssistantSettings {
+    return $state.snapshot({ provider: this.providerId, models: this.models, recent: this.recent });
+  }
+
+  // Takes over settings from a settings file: the provider, models this
+  // version still offers, and recent tones. Starts a new chat if the
+  // provider or model changes.
+  restoreSettings(v: unknown) {
+    const s = (v && typeof v === 'object' ? v : {}) as Partial<AssistantSettings>;
+    const before = `${this.providerId}/${this.model}`;
+    for (const p of PROVIDERS) {
+      const m = s.models?.[p.id];
+      if (!p.models.some((x) => x.id === m)) continue;
+      this.models[p.id] = m!;
+      store(`spiderv.ai.model.${p.id}`, m!);
+    }
+    if (PROVIDERS.some((p) => p.id === s.provider)) {
+      this.providerId = s.provider!;
+      store('spiderv.ai.provider', s.provider!);
+    }
+    if (Array.isArray(s.recent)) {
+      this.recent = parseRecent(s.recent);
+      store(RECENT_KEY, this.recent.length ? JSON.stringify(this.recent) : '');
+    }
+    if (`${this.providerId}/${this.model}` !== before) this.reset();
   }
 
   reset() {

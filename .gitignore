@@ -4,3 +4,4 @@ app/dist/
 backups/
 app/src/lib/catalog.json
 dist-exe/
+tones/

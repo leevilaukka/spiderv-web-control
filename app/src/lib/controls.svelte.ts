@@ -15,16 +15,18 @@ type Settings = {
   programChange: boolean; // program change messages select presets
 };
 
-function load(): Settings {
+function parse(v: Partial<Settings> | null): Settings {
   const s: Settings = { channelKey: '', channelCc: null, midi: false, programChange: true };
-  try {
-    const v = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}');
-    if (typeof v.channelKey === 'string') s.channelKey = v.channelKey;
-    if (typeof v.channelCc === 'number') s.channelCc = v.channelCc;
-    s.midi = !!v.midi;
-    if (typeof v.programChange === 'boolean') s.programChange = v.programChange;
-  } catch {}
+  if (!v || typeof v !== 'object') return s;
+  if (typeof v.channelKey === 'string') s.channelKey = v.channelKey;
+  if (typeof v.channelCc === 'number' && Number.isInteger(v.channelCc) && v.channelCc >= 0 && v.channelCc < 128) s.channelCc = v.channelCc;
+  s.midi = !!v.midi;
+  if (typeof v.programChange === 'boolean') s.programChange = v.programChange;
   return s;
+}
+
+function load(): Settings {
+  try { return parse(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}')); } catch { return parse(null); }
 }
 
 class Controls {
@@ -63,6 +65,11 @@ class Controls {
       if (patch.midi) this.startMidi();
       else this.attach();
     }
+  }
+
+  // Takes over settings from a settings file.
+  restore(v: unknown) {
+    this.update(parse(v as Partial<Settings> | null));
   }
 
   // ------------------------------------------------------------ MIDI pedals

@@ -1,6 +1,7 @@
 <script lang="ts">
   // Save button plus a menu for tone files and backups.
   import { amp } from '../amp.svelte';
+  import { importFile } from '../settings.svelte';
   import Menu from './Menu.svelte';
   import SaveDialog from './SaveDialog.svelte';
 
@@ -10,7 +11,7 @@
   function picked(e: Event) {
     const el = e.currentTarget as HTMLInputElement;
     const file = el.files?.[0];
-    if (file) amp.importTone(file);
+    if (file) importFile(file);
     el.value = '';
   }
 </script>

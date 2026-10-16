@@ -10,6 +10,7 @@ import { type ToneFile, applyImport, planImport, readToneFile, toToneFile } from
 import type { Shortcut } from './shortcuts';
 import { type Channels, type PresetExtras, otherChannel, parsePresetExtras, pickGroups, switchTone } from './channels';
 import { type Arrangement, arrangedTone } from './arrange';
+import { download } from './download';
 
 const SYMBOLS_KEY = 'spiderv.symbols';
 const EXTRAS_KEY = 'spiderv.shortcuts'; // named when it held only shortcuts
@@ -461,6 +462,21 @@ export class Amp {
     this.imported = $state.snapshot(l.imported);
   }
 
+  // ------------------------------------------------------------ app settings files
+
+  get extras(): Record<number, PresetExtras> { return $state.snapshot(this.storedExtras); }
+
+  // Replaces the stored shortcuts and channels of every preset. The current
+  // preset takes its new ones unless the edit buffer holds an unsaved tone or
+  // channel edits; returns whether it did.
+  replaceExtras(extras: Record<number, PresetExtras>): boolean {
+    this.storedExtras = structuredClone(extras);
+    try { localStorage.setItem(EXTRAS_KEY, JSON.stringify(this.storedExtras)); } catch {}
+    if (this.imported || this.channelsEdited) return false;
+    this.loadExtras();
+    return true;
+  }
+
   private storeExtras(index: number, e: PresetExtras) {
     if (e.shortcuts.length || e.channels) this.storedExtras[index] = $state.snapshot(e);
     else delete this.storedExtras[index];
@@ -625,14 +641,6 @@ export class Amp {
 
   private info(text: string) { this.log.push({ t: Date.now(), dir: 'info', text }); }
   private report(e: unknown) { this.info(`error: ${(e as Error).message}`); }
-}
-
-function download(text: string, filename: string) {
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
-  a.download = filename;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
 export const amp = new Amp();

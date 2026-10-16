@@ -71,14 +71,23 @@ function parseChannels(v: unknown): Channels | null {
 export function parsePresetExtras(json: string | null): Record<number, PresetExtras> {
   let store: unknown;
   try { store = JSON.parse(json ?? '{}'); } catch { return {}; }
+  return readPresetExtras(store);
+}
+
+// The same from parsed JSON, such as a settings file's "presets".
+export function readPresetExtras(store: unknown): Record<number, PresetExtras> {
   if (!store || typeof store !== 'object' || Array.isArray(store)) return {};
   const out: Record<number, PresetExtras> = {};
   for (const [k, v] of Object.entries(store)) {
     if (!/^\d+$/.test(k)) continue;
-    const e = Array.isArray(v)
-      ? { shortcuts: parseShortcuts(v), channels: null }
-      : { shortcuts: parseShortcuts((v as PresetExtras | null)?.shortcuts), channels: parseChannels((v as PresetExtras | null)?.channels) };
+    const e = Array.isArray(v) ? { shortcuts: parseShortcuts(v), channels: null } : readExtras(v);
     if (e.shortcuts.length || e.channels) out[Number(k)] = e;
   }
   return out;
+}
+
+// One preset's extras, such as those a tone file carries.
+export function readExtras(v: unknown): PresetExtras {
+  const e = v as Partial<PresetExtras> | null;
+  return { shortcuts: parseShortcuts(e?.shortcuts), channels: parseChannels(e?.channels) };
 }

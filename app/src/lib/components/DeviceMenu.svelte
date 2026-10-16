@@ -7,6 +7,16 @@
   import { remote } from '../remote.svelte';
   import { keepAwake } from '../keepawake.svelte';
   import { catalogStore } from '../catalog.svelte';
+  import { exportSettings, importFile } from '../settings.svelte';
+
+  let input: HTMLInputElement | undefined = $state();
+
+  function picked(e: Event) {
+    const el = e.currentTarget as HTMLInputElement;
+    const file = el.files?.[0];
+    if (file) importFile(file);
+    el.value = '';
+  }
 
   const short = $derived(amp.demo ? 'Demo amp' : amp.label.replace(/ MIDI \d+$/, ''));
   const awake = $derived(
@@ -51,6 +61,14 @@
         <small>{remote.settings.share ? (remote.online ? `Sharing, code ${remote.settings.code}` : 'Sharing is on') : 'Use a phone on the same Wi-Fi as a remote'}</small>
       </button>
     {/if}
+    <button class="item" role="menuitem" onclick={() => { close(); exportSettings(); }}>
+      Export app settings
+      <small>Shortcuts, channels, controls and assistant setup, without API keys</small>
+    </button>
+    <button class="item" role="menuitem" disabled={!!amp.importing} onclick={() => { close(); input?.click(); }}>
+      Import app settings…
+      <small>Replaces those kept in this browser; you can undo it</small>
+    </button>
     <button class="item" role="menuitem" onclick={() => { close(); amp.disconnect(); }}>
       Disconnect
       <small>{amp.remoteCode ? 'Stop controlling the amp from here' : 'Close the tab to free the amp for other programs'}</small>
@@ -58,6 +76,7 @@
   {/snippet}
 </Menu>
 
+<input bind:this={input} type="file" accept=".json,application/json" onchange={picked} hidden />
 <ControlsDialog />
 <ShareDialog />
 

@@ -21,6 +21,9 @@ Tested with a Spider V 20 MkII on firmware 2.0.1.
   - **MIDI pedals**: program change selects presets, footswitches trigger shortcuts or the channel switch,
     and an expression pedal sweeps a shortcut's knobs
   - The tone assistant can set up shortcuts and channels too
+  - **Export and import the app settings** (amp menu) to back them up or move them to another browser:
+    every preset's shortcuts and channels, the controls and MIDI pedal setup, and the tone assistant's
+    provider, models and recent tones. API keys stay out of the file; an import can be undone
 - **Import tone files** (`.svl6p` from Spider V Remote, the JSON "version 5" format of
   Line 6's Spider Remote apps, or raw preset dumps) via the button or drag-and-drop, and **export** the current tone as `.svl6p`
 - **Save** the current tone to any preset slot (with a new name), with one-click undo,
