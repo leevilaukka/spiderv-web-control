@@ -8,7 +8,8 @@ Tested with a Spider V 20 MkII on firmware 2.0.1.
 - See the signal chain, switch blocks on and off, and change amp, effect, reverb, wah and cab/mic models
 - **Drag effects around the chain** (or Alt+← →) to the places the amp allows: effects, reverb and
   volume pedal before or after the amp, and effects in any order on each side
-- Turn every parameter knob, with names and ranges from Line 6's model catalog
+- Turn every parameter knob, with names and ranges from Line 6's model catalog, which you load from
+  your own copy of the Spider Remote app (see [Model catalog](#model-catalog))
 - Follows preset changes and edits made on the amp itself
 - **GX-100-style performance controls**, kept per preset in the browser and saved along with the tone:
   - **Shortcuts** switch several blocks and set knobs at once (like CTL/assign switches with min/max),
@@ -47,6 +48,7 @@ bun run dev
 
 Open http://localhost:5173, connect the amp over USB, click **Connect**, and allow
 MIDI (with SysEx) access. Use `?demo` or **Try the demo** to run without an amp.
+Then load the [model catalog](#model-catalog) once, for model names and model changes.
 
 Edits and imported tones go to the amp's edit buffer. **Save…** writes the edit buffer
 to a preset slot the way Spider V Remote does (`SetPresetFile`); right after saving
@@ -154,19 +156,28 @@ until the tab (sometimes the whole browser) is closed, even after **Disconnect**
 bun test
 ```
 
-The fixtures in `test/fixtures` are listed under [Third-party material](#third-party-material).
-`test/fixtures/test-tone-plexi.svl6p` is a tone made for the tests, laid out exactly like a file
-saved by Spider V Remote.
+Some fixtures in `test/fixtures` are listed under [Third-party material](#third-party-material).
+Made for the tests: `test-catalog.json`, a model catalog covering the models the tests and demo
+mode use (with made-up names and defaults), and `test-tone-plexi.svl6p`, a tone laid out exactly
+like a file saved by Spider V Remote.
 
 ## Model catalog
 
-`app/src/lib/catalog.json` (display names, parameter names and ranges) is extracted
-from the assets of Line 6's *Spider Remote* Android app:
+The names of the amp's models and knobs, their ranges and defaults, and which models each block
+can use come from Line 6's *Spider Remote* Android app. They belong to Line 6, so this project
+doesn't include them. Load them from your own copy of the app:
 
-```sh
-unzip -o SpiderRemote.apk 'assets/*' -d /tmp/spider-apk
-bun tools/extract-catalog.ts /tmp/spider-apk/assets
-```
+- **In the app:** amp menu → **Model catalog…**, then choose the Spider Remote APK (`.apk`,
+  `.xapk` or `.apks`). It is read in the browser and kept there; phones connected as remotes get it
+  from the computer. Copy the APK from an Android phone with the app installed, e.g. with an APK
+  extractor app.
+- **At build time:** `bun tools/extract-catalog.ts SpiderRemote.apk` writes
+  `app/src/lib/catalog.json` (ignored by git), which the app's build includes. Keep such a build
+  to yourself.
+
+Without the catalog the editor still works: model and knob names are made from the amp's
+internal ids (`DoubleVerb` → "Double Verb"), knobs show 0 to 10, and models can't be changed.
+Demo mode uses the test catalog.
 
 ## License
 
@@ -177,7 +188,6 @@ is not covered by that license and stays with its owners.
 
 | File | What it is | Source |
 |---|---|---|
-| `app/src/lib/catalog.json` | Model and parameter names, ranges and defaults | Assets of Line 6's *Spider Remote* app; regenerate with `tools/extract-catalog.ts` |
 | `test/fixtures/spiderv20-mkii-session.json` | Replies of a Spider V 20 MkII (fw 2.0.1): its symbol table, the names of its 128 presets and one preset. Used by the tests and demo mode | Recorded from the author's amp with `bun tools/spiderv-cli.ts record` |
 | `test/fixtures/line6-arachnid-rhythm.json` | The sample tone shipped in the app | Line 6 *Spider Remote* app |
 | `test/fixtures/spiderv30-remote-capture.txt` | SysEx between Spider V Remote and a Spider V 30, extracted with `tools/pcap2sysex.py` | USB capture in [stric9r/Line6-FBV3-Clone](https://github.com/stric9r/Line6-FBV3-Clone) (GPL-3.0) |

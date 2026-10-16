@@ -2,3 +2,4 @@ node_modules/
 app/dist/
 .cache/
 backups/
+app/src/lib/catalog.json

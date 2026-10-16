@@ -34,8 +34,8 @@ test('builds a named signal chain from the edit buffer', async () => {
   const chain = buildChain(await amp.readPreset(), amp.symbols!);
   expect(chain.map((s) => s.sym)).toEqual(['Gate', 'Wah', 'FX1', 'FX2', 'FX3', 'Amp', 'StudioCab', 'FX4', 'PostComp', 'PostEQ', 'VolumePedal']);
   const amp_ = chain.find((s) => s.sym === 'Amp')!;
-  expect(amp_.modelName).toBe('1965 Double Verb');
-  expect(amp_.params.map((p) => p.label)).toEqual(['Bass', 'Mid', 'Treble', 'Drive', 'Presence']);
+  expect(amp_.modelName).toBe('Test Double Verb');
+  expect(amp_.params.map((p) => p.label)).toEqual(['Bass', 'Mid', 'Treble', 'Gain', 'Presence']);
   expect(amp_.extras.map((p) => p.label)).toEqual(['Volume']);
   for (const s of chain) expect(s.enable, s.sym).toBeDefined();
   const cab = chain.find((s) => s.sym === 'StudioCab')!;
@@ -58,7 +58,7 @@ test('sets parameters, toggles blocks and changes models', async () => {
   expect(chain.find((s) => s.sym === 'Amp')!.params[0].value).toBeCloseTo(0.25);
   const fx4 = chain.find((s) => s.sym === 'FX4')!;
   expect(fx4.enable!.value).toBe(0);
-  expect(fx4.modelName).toBe('Medium Hall');
+  expect(fx4.modelName).toBe('Test Medium Hall');
   expect(await amp.isDirty()).toBe(true);
 });
 

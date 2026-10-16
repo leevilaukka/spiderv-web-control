@@ -72,9 +72,14 @@ export function readToneFile(bytes: Bytes, st: SymbolTable): ToneFile {
   return toToneFile(preset, st);
 }
 
-const typeOf = (model: string, param: string): MsgType => {
+// A setting's value type from the catalog; without one, from the edit
+// buffer (`stored`, when the block keeps its model), else a true/false in
+// the file means a switch and anything else a knob.
+const typeOf = (model: string, param: string, raw: unknown, stored?: VType): MsgType => {
   const t = catalog.models[model]?.params.find((p) => p.sym === param)?.type;
-  return t === 0 ? MsgType.Int : t === 2 ? MsgType.Bool : MsgType.Float;
+  if (t !== undefined) return t === 0 ? MsgType.Int : t === 2 ? MsgType.Bool : MsgType.Float;
+  if (stored !== undefined) return stored === VType.Int ? MsgType.Int : stored === VType.Bool ? MsgType.Bool : MsgType.Float;
+  return typeof raw === 'boolean' ? MsgType.Bool : MsgType.Float;
 };
 
 const num = (v: unknown) => (typeof v === 'boolean' ? Number(v) : Number(v));
@@ -93,6 +98,7 @@ export function planImport(file: ToneFile, st: SymbolTable, current?: Preset): I
   if (root === undefined) throw new Error('The amp has no GuitarProc block.');
 
   const currentModel = new Map((current?.tone?.children ?? []).map((b) => [b.id, b.model]));
+  const kept = new Set<number>(); // blocks whose model stays, so their stored types apply
 
   const rootParam = (name: string, value: number, type: MsgType, label: string) => {
     const ctrl = st.id(name);
@@ -119,7 +125,7 @@ export function planImport(file: ToneFile, st: SymbolTable, current?: Preset): I
     const id = st.id(modelSym);
     if (id === undefined) { warnings.push(`${group}: this amp has no model "${model}"; kept the current one.`); continue; }
     models[group] = model;
-    if (currentModel.get(obj) === id) continue;
+    if (currentModel.get(obj) === id) { kept.add(obj); continue; }
     ops.push({ kind: 'model', obj, model: id, label: `${group}: ${catalog.models[model]?.name ?? model}` });
   }
 
@@ -145,7 +151,10 @@ export function planImport(file: ToneFile, st: SymbolTable, current?: Preset): I
       const target = group === 'cab' && key === 'Level' ? st.id('Air') : obj;
       const ctrl = st.id(key);
       if (ctrl === undefined || target === undefined) { skipped.push(label); continue; }
-      ops.push({ kind: 'param', obj: target, ctrl, type: group === 'cab' ? MsgType.Float : typeOf(model, key), value, label });
+      const stored = kept.has(obj)
+        ? current?.tone?.children.find((b) => b.id === obj)?.params.find((p) => p.key === st.id(key + 'State'))?.type
+        : undefined;
+      ops.push({ kind: 'param', obj: target, ctrl, type: group === 'cab' ? MsgType.Float : typeOf(model, key, raw, stored), value, label });
     }
   }
 

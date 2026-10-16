@@ -8,6 +8,7 @@ import { type SharedState, amp } from './amp.svelte';
 import type { HubPort } from './protocol/hub';
 import { type AppMessage, RemoteTransport, relayUrl } from './protocol/remote';
 import { keepAwake } from './keepawake.svelte';
+import { catalogStore } from './catalog.svelte';
 
 const STORAGE_KEY = 'spiderv.remote';
 const RETRY_MS = 3000;
@@ -174,7 +175,7 @@ class Remote {
     port.ondisconnect = () => this.post({ to: id, t: 'gone', reason: 'The amp was disconnected from the computer.' });
     this.ports.set(id, port);
     this.phones = this.ports.size;
-    this.post({ to: id, t: 'hello', label: amp.label, state: amp.shared() });
+    this.post({ to: id, t: 'hello', label: amp.label, state: amp.shared(), catalog: catalogStore.shareable() });
   }
 
   private phoneLeft(id: number) {

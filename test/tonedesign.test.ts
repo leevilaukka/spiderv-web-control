@@ -18,8 +18,8 @@ async function connect() {
 test('the catalog prompt lists models with parameters and defaults', async () => {
   const amp = await connect();
   const prompt = catalogPrompt(amp.symbols!);
-  expect(prompt).toContain(`- BlackfaceLux "1964 Blackface 'Lux": Bass .83, Mid .49, Treble .77, Drive .76, Presence 0`);
-  expect(prompt).toContain('- gate (Noise Gate): Thresh "Threshold" -96..0 dB -58, Decay .04');
+  expect(prompt).toContain('- BlackfaceLux "Test Blackface Lux": Bass .5, Mid .5, Treble .5, Drive .5, Presence .5');
+  expect(prompt).toContain('- gate (Test Noise Gate): Thresh "Threshold" -96..0 dB -48, Decay .5');
   expect(prompt).not.toContain('SyncSelect');
   // Models listed under several categories appear once.
   expect(prompt.match(/^- BlackfaceLux /gm)).toHaveLength(1);
@@ -51,7 +51,7 @@ test('a proposal is checked, clamped and applied', async () => {
   expect(file.data.tone.fx1).toBeUndefined();
   expect(problems).toEqual([
     'amp.Drive: 1.4 is outside 0..1; used 1.',
-    "amp.Wattage: 1964 Blackface 'Lux has no such setting; ignored.",
+    'amp.Wattage: Test Blackface Lux has no such setting; ignored.',
     'cab.@mic: 3.4 is outside 0..3 (whole numbers); used 3.',
     'fx1: this amp has no fx model "NoSuchPedal"; left unchanged.',
     'Unknown group "looper".',
@@ -85,7 +85,7 @@ test('changes between two tones read like the editor', async () => {
   t.cab = { ...t.cab, '@mic': 3 };
   const changes = diffTones(before, after);
   const amps = changes.filter((c) => c.block === 'Amp').map((c) => c.text);
-  expect(amps[0]).toMatch(/ → 1964 Blackface 'Lux$/);
+  expect(amps[0]).toMatch(/ → Test Blackface Lux$/);
   expect(amps.slice(1)).toEqual(['Drive 7.5', 'Bass 5.0']); // volume unchanged
   const mix = Number(before.data.tone.reverb['@mix']);
   expect(changes.filter((c) => c.block === 'Reverb').map((c) => c.text)).toEqual([

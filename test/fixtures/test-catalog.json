@@ -1,0 +1,1281 @@
+{
+ "source": "Test catalog written for this project (ids, value types and ranges; names and defaults are made up)",
+ "models": {
+  "DoubleVerb": {
+   "name": "Test Double Verb",
+   "short": "Double Verb",
+   "group": "amp",
+   "params": [
+    {
+     "sym": "Bass",
+     "name": "Bass",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Mid",
+     "name": "Mid",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Treble",
+     "name": "Treble",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Gain",
+     "name": "Gain",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Presence",
+     "name": "Presence",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@volume",
+     "name": "@volume",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    }
+   ]
+  },
+  "BlackfaceLux": {
+   "name": "Test Blackface Lux",
+   "short": "Blackface Lux",
+   "group": "amp",
+   "params": [
+    {
+     "sym": "Bass",
+     "name": "Bass",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Mid",
+     "name": "Mid",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Treble",
+     "name": "Treble",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Drive",
+     "name": "Drive",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Presence",
+     "name": "Presence",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@volume",
+     "name": "@volume",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    }
+   ]
+  },
+  "BritPlexi45": {
+   "name": "Test Brit Plexi 45",
+   "short": "Brit Plexi 45",
+   "group": "amp",
+   "params": [
+    {
+     "sym": "Bass",
+     "name": "Bass",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Mid",
+     "name": "Mid",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Treble",
+     "name": "Treble",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Gain",
+     "name": "Gain",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Presence",
+     "name": "Presence",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@volume",
+     "name": "@volume",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    }
+   ]
+  },
+  "BritPlexiJumpLead": {
+   "name": "Test Brit Plexi Jump Lead",
+   "short": "Brit Plexi Jump Lead",
+   "group": "amp",
+   "params": [
+    {
+     "sym": "Bass",
+     "name": "Bass",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Mid",
+     "name": "Mid",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Treble",
+     "name": "Treble",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Drive",
+     "name": "Drive",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Presence",
+     "name": "Presence",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@volume",
+     "name": "@volume",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    }
+   ]
+  },
+  "BritPlexiLead100": {
+   "name": "Test Brit Plexi Lead 100",
+   "short": "Brit Plexi Lead 100",
+   "group": "amp",
+   "params": [
+    {
+     "sym": "Bass",
+     "name": "Bass",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Mid",
+     "name": "Mid",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Treble",
+     "name": "Treble",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Drive",
+     "name": "Drive",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Presence",
+     "name": "Presence",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@volume",
+     "name": "@volume",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    }
+   ]
+  },
+  "Screamer": {
+   "name": "Test Screamer",
+   "short": "Screamer",
+   "group": "stomp",
+   "params": [
+    {
+     "sym": "Drive",
+     "name": "Drive",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Gain",
+     "name": "Gain",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Tone",
+     "name": "Tone",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "@mix",
+     "name": "@mix",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@post",
+     "name": "@post",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "TubeDrive": {
+   "name": "Test Tube Drive",
+   "short": "Tube Drive",
+   "group": "stomp",
+   "params": [
+    {
+     "sym": "Drive",
+     "name": "Drive",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Treble",
+     "name": "Treble",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Gain",
+     "name": "Gain",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Bass",
+     "name": "Bass",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "@mix",
+     "name": "@mix",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@post",
+     "name": "@post",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "ClassicDistortion": {
+   "name": "Test Classic Distortion",
+   "short": "Classic Distortion",
+   "group": "stomp",
+   "params": [
+    {
+     "sym": "Drive",
+     "name": "Drive",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Gain",
+     "name": "Gain",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Tone",
+     "name": "Tone",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "@mix",
+     "name": "@mix",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@post",
+     "name": "@post",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "OptoTremolo": {
+   "name": "Test Opto Tremolo",
+   "short": "Opto Tremolo",
+   "group": "mod",
+   "params": [
+    {
+     "sym": "SyncSelect",
+     "name": "SyncSelect",
+     "min": 1,
+     "max": 14,
+     "def": 1,
+     "type": 0
+    },
+    {
+     "sym": "@temposync",
+     "name": "@temposync",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "Speed",
+     "name": "Speed",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Shape",
+     "name": "Shape",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@mix",
+     "name": "@mix",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "@post",
+     "name": "@post",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "L6Flanger": {
+   "name": "Test L6 Flanger",
+   "short": "L6 Flanger",
+   "group": "mod",
+   "params": [
+    {
+     "sym": "SyncSelect",
+     "name": "SyncSelect",
+     "min": 1,
+     "max": 14,
+     "def": 1,
+     "type": 0
+    },
+    {
+     "sym": "@temposync",
+     "name": "@temposync",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "Freq",
+     "name": "Freq",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Depth",
+     "name": "Depth",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@mix",
+     "name": "@mix",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "@post",
+     "name": "@post",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "TapeEcho": {
+   "name": "Test Tape Echo",
+   "short": "Tape Echo",
+   "group": "delay",
+   "params": [
+    {
+     "sym": "SyncSelect",
+     "name": "SyncSelect",
+     "min": 1,
+     "max": 14,
+     "def": 1,
+     "type": 0
+    },
+    {
+     "sym": "@temposync",
+     "name": "@temposync",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "Time",
+     "name": "Time",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Feedback",
+     "name": "Feedback",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Bass",
+     "name": "Bass",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Treble",
+     "name": "Treble",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@mix",
+     "name": "@mix",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "@post",
+     "name": "@post",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "AnalogDelay": {
+   "name": "Test Analog Delay",
+   "short": "Analog Delay",
+   "group": "delay",
+   "params": [
+    {
+     "sym": "SyncSelect",
+     "name": "SyncSelect",
+     "min": 1,
+     "max": 14,
+     "def": 1,
+     "type": 0
+    },
+    {
+     "sym": "@temposync",
+     "name": "@temposync",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "Time",
+     "name": "Time",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Feedback",
+     "name": "Feedback",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Bass",
+     "name": "Bass",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Treble",
+     "name": "Treble",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@mix",
+     "name": "@mix",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "@post",
+     "name": "@post",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "LuxSpring": {
+   "name": "Test Lux Spring",
+   "short": "Lux Spring",
+   "group": "reverb",
+   "params": [
+    {
+     "sym": "Time",
+     "name": "Time",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Tone",
+     "name": "Tone",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@mix",
+     "name": "@mix",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "@post",
+     "name": "@post",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "MediumHall": {
+   "name": "Test Medium Hall",
+   "short": "Medium Hall",
+   "group": "reverb",
+   "params": [
+    {
+     "sym": "Decay",
+     "name": "Decay",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "PreDelay",
+     "name": "PreDelay",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Tone",
+     "name": "Tone",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@mix",
+     "name": "@mix",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "@post",
+     "name": "@post",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "RichChamber2": {
+   "name": "Test Rich Chamber 2",
+   "short": "Rich Chamber 2",
+   "group": "reverb",
+   "params": [
+    {
+     "sym": "Decay",
+     "name": "Decay",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "PreDelay",
+     "name": "PreDelay",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Tone",
+     "name": "Tone",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@mix",
+     "name": "@mix",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "@post",
+     "name": "@post",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "Weeper": {
+   "name": "Test Weeper",
+   "short": "Weeper",
+   "group": "wah",
+   "params": [
+    {
+     "sym": "Pedal",
+     "name": "Pedal",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "Line6Vetta": {
+   "name": "Test Line 6 Vetta",
+   "short": "Line 6 Vetta",
+   "group": "wah",
+   "params": [
+    {
+     "sym": "Pedal",
+     "name": "Pedal",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "2x12BlackfaceStudio": {
+   "name": "Test 2x12 Blackface",
+   "short": "2x12 Blackface",
+   "group": "cab",
+   "params": [
+    {
+     "sym": "@mic",
+     "name": "@mic",
+     "min": 0,
+     "max": 3,
+     "def": 0,
+     "type": 0
+    },
+    {
+     "sym": "Level",
+     "name": "Level",
+     "min": 0,
+     "max": 1,
+     "def": 0,
+     "type": 1
+    },
+    {
+     "sym": "@speakermode",
+     "name": "@speakermode",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    }
+   ]
+  },
+  "1x12BlackfaceStudio": {
+   "name": "Test 1x12 Blackface",
+   "short": "1x12 Blackface",
+   "group": "cab",
+   "params": [
+    {
+     "sym": "@mic",
+     "name": "@mic",
+     "min": 0,
+     "max": 3,
+     "def": 0,
+     "type": 0
+    },
+    {
+     "sym": "Level",
+     "name": "Level",
+     "min": 0,
+     "max": 1,
+     "def": 0,
+     "type": 1
+    },
+    {
+     "sym": "@speakermode",
+     "name": "@speakermode",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    }
+   ]
+  },
+  "4x12Green25sStudio": {
+   "name": "Test 4x12 Green 25s",
+   "short": "4x12 Green 25s",
+   "group": "cab",
+   "params": [
+    {
+     "sym": "@mic",
+     "name": "@mic",
+     "min": 0,
+     "max": 3,
+     "def": 0,
+     "type": 0
+    },
+    {
+     "sym": "Level",
+     "name": "Level",
+     "min": 0,
+     "max": 1,
+     "def": 0,
+     "type": 1
+    },
+    {
+     "sym": "@speakermode",
+     "name": "@speakermode",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    }
+   ]
+  },
+  "Gate": {
+   "name": "Test Noise Gate",
+   "short": "Noise Gate",
+   "group": "fixed",
+   "params": [
+    {
+     "sym": "Thresh",
+     "name": "Threshold",
+     "min": -96,
+     "max": 0,
+     "def": -48.0,
+     "type": 1
+    },
+    {
+     "sym": "Decay",
+     "name": "Decay",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "SharcPodFixedComp": {
+   "name": "Test Compressor",
+   "short": "Compressor",
+   "group": "fixed",
+   "params": [
+    {
+     "sym": "Thresh/G",
+     "name": "Thresh/G",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Gain",
+     "name": "Gain",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "ParaGraphic4_band": {
+   "name": "Test 4-band EQ",
+   "short": "4-band EQ",
+   "group": "fixed",
+   "params": [
+    {
+     "sym": "Low",
+     "name": "Low",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "gain",
+     "name": "gain",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "LMid",
+     "name": "LMid",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "gain.1",
+     "name": "gain.1",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "HMid",
+     "name": "HMid",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Gain",
+     "name": "Gain",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "Hi",
+     "name": "Hi",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "gain.2",
+     "name": "gain.2",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  },
+  "VolumePedal": {
+   "name": "Test Volume Pedal",
+   "short": "Volume Pedal",
+   "group": "fixed",
+   "params": [
+    {
+     "sym": "MinVol",
+     "name": "MinVol",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "MaxVol",
+     "name": "MaxVol",
+     "min": 0,
+     "max": 1,
+     "def": 0.5,
+     "type": 1
+    },
+    {
+     "sym": "@post",
+     "name": "@post",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    },
+    {
+     "sym": "@enabled",
+     "name": "@enabled",
+     "min": false,
+     "max": true,
+     "def": false,
+     "type": 2
+    }
+   ]
+  }
+ },
+ "lists": {
+  "amp": [
+   {
+    "category": "Test amps",
+    "models": [
+     "DoubleVerb",
+     "BlackfaceLux",
+     "BritPlexi45",
+     "BritPlexiJumpLead",
+     "BritPlexiLead100"
+    ]
+   }
+  ],
+  "fx": [
+   {
+    "category": "Test drives",
+    "models": [
+     "Screamer",
+     "TubeDrive",
+     "ClassicDistortion"
+    ]
+   },
+   {
+    "category": "Test modulation",
+    "models": [
+     "OptoTremolo",
+     "L6Flanger"
+    ]
+   },
+   {
+    "category": "Test delays",
+    "models": [
+     "TapeEcho",
+     "AnalogDelay"
+    ]
+   }
+  ],
+  "reverb": [
+   {
+    "category": "Test reverbs",
+    "models": [
+     "LuxSpring",
+     "MediumHall",
+     "RichChamber2"
+    ]
+   }
+  ],
+  "wah": [
+   {
+    "category": "Test wahs",
+    "models": [
+     "Weeper",
+     "Line6Vetta"
+    ]
+   }
+  ],
+  "cab": [
+   {
+    "category": "Test cabs",
+    "models": [
+     "2x12BlackfaceStudio",
+     "1x12BlackfaceStudio",
+     "4x12Green25sStudio",
+     "@NoCabinet"
+    ]
+   }
+  ]
+ }
+}

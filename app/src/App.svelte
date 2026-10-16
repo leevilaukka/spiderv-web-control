@@ -11,6 +11,7 @@
   import Notice from './lib/components/Notice.svelte';
   import Assistant from './lib/components/Assistant.svelte';
   import Stage from './lib/components/Stage.svelte';
+  import CatalogDialog from './lib/components/CatalogDialog.svelte';
   import { controls } from './lib/controls.svelte';
   import { assistant } from './lib/assistant.svelte';
   import { WebMidiTransport } from './lib/protocol/webmidi';
@@ -171,6 +172,7 @@
   </div>
   <Assistant />
   <Stage />
+  <CatalogDialog />
 {/if}
 
 <style>

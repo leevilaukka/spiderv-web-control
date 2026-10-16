@@ -4,6 +4,7 @@ import { type Bytes, type ParamChange, MsgType, i32, le32 } from './protocol/cod
 import { WebMidiTransport } from './protocol/webmidi';
 import { Hub } from './protocol/hub';
 import { RemoteTransport } from './protocol/remote';
+import { catalogStore } from './catalog.svelte';
 import { type Control, type Slot, MICS, buildChain, splitCab } from './tone';
 import { type ToneFile, applyImport, planImport, readToneFile, toToneFile } from './presetfile';
 import type { Shortcut } from './shortcuts';
@@ -105,8 +106,14 @@ export class Amp {
     try {
       let t: Transport;
       if (typeof source === 'object') {
-        t = await RemoteTransport.connect(source.remote);
+        const rt = await RemoteTransport.connect(source.remote);
+        // The computer's model catalog, if it has one; else this browser's.
+        catalogStore.restore();
+        if (rt.hello.catalog) catalogStore.useRemote(rt.hello.catalog);
+        t = rt;
       } else {
+        if (demo) await catalogStore.useDemo();
+        else catalogStore.restore();
         if (demo) {
           const [{ MockTransport }, session] = await Promise.all([
             import('./protocol/mock'),

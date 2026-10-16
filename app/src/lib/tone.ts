@@ -1,15 +1,31 @@
 // Turns a parsed preset + the amp's symbol table + the model catalog into an
 // editable view of the signal chain.
 import { type Block, type Preset, MsgType, SymbolTable, VType } from './protocol/codec';
-import catalogJson from './catalog.json';
 
+// The model catalog: display names, parameter names and ranges, and which
+// models each slot takes. It comes from Line 6's Spider Remote app, so it
+// isn't part of this project; the user loads it (catalog.svelte.ts). Without
+// it, names are made from the amp's symbols and models can't be changed.
 export type CatalogParam = { sym: string; name: string; min: number; max: number; def: number | boolean; type: number };
 export type CatalogModel = { name: string; short: string; group: string; params: CatalogParam[] };
-type Catalog = {
+export type Catalog = {
+  source?: string;
   models: Record<string, CatalogModel>;
   lists: Record<'amp' | 'fx' | 'reverb' | 'wah' | 'cab', { category: string; models: string[] }[]>;
 };
-export const catalog = catalogJson as unknown as Catalog;
+export const EMPTY_CATALOG: Catalog = { models: {}, lists: { amp: [], fx: [], reverb: [], wah: [], cab: [] } };
+
+export let catalog: Catalog = EMPTY_CATALOG;
+export function setCatalog(c: Catalog | null) { catalog = c ?? EMPTY_CATALOG; }
+export const hasCatalog = () => catalog !== EMPTY_CATALOG;
+
+// Checks the shape of a catalog read from a file or another browser.
+export function validCatalog(v: unknown): v is Catalog {
+  const c = v as Catalog;
+  return !!c && typeof c === 'object' && !!c.models && typeof c.models === 'object' && !!c.lists
+    && (['amp', 'fx', 'reverb', 'wah', 'cab'] as const).every((k) => Array.isArray(c.lists[k]))
+    && Object.values(c.models).every((m) => m && typeof m.name === 'string' && Array.isArray(m.params));
+}
 
 export type ModelList = keyof Catalog['lists'];
 
@@ -50,15 +66,16 @@ export type Slot = {
 export const displayScale = (c: { min: number; max: number }) => (c.min === 0 && c.max === 1 ? 10 : 1);
 
 // Chain slots in display order, with the GuitarProc controls that belong to them.
-const SLOTS: { sym: string; label: string; list?: ModelList; enable?: string; extras?: [string, string][] }[] = [
+// `group` colours the block when the catalog doesn't say what its model is.
+const SLOTS: { sym: string; label: string; list?: ModelList; group?: string; enable?: string; extras?: [string, string][] }[] = [
   { sym: 'Gate', label: 'Gate', enable: 'GateEnable' },
-  { sym: 'Wah', label: 'Wah', list: 'wah', enable: 'WahEnable' },
-  { sym: 'FX1', label: 'FX 1', list: 'fx', enable: 'FX1Enable', extras: [['FX1Mix', 'Mix'], ['FX1Post', 'Post amp']] },
-  { sym: 'FX2', label: 'FX 2', list: 'fx', enable: 'FX2Enable', extras: [['FX2Mix', 'Mix'], ['FX2Post', 'Post amp']] },
-  { sym: 'FX3', label: 'FX 3', list: 'fx', enable: 'FX3Enable', extras: [['FX3Mix', 'Mix'], ['FX3Post', 'Post amp']] },
-  { sym: 'Amp', label: 'Amp', list: 'amp', enable: 'AmpEnable', extras: [['ChannelVolume', 'Volume']] },
-  { sym: 'StudioCab', label: 'Cab', list: 'cab', enable: 'CabEnable' },
-  { sym: 'FX4', label: 'Reverb', list: 'reverb', enable: 'FX4Enable', extras: [['FX4Mix', 'Mix'], ['FX4Post', 'Post amp']] },
+  { sym: 'Wah', label: 'Wah', list: 'wah', group: 'wah', enable: 'WahEnable' },
+  { sym: 'FX1', label: 'FX 1', list: 'fx', group: 'stomp', enable: 'FX1Enable', extras: [['FX1Mix', 'Mix'], ['FX1Post', 'Post amp']] },
+  { sym: 'FX2', label: 'FX 2', list: 'fx', group: 'mod', enable: 'FX2Enable', extras: [['FX2Mix', 'Mix'], ['FX2Post', 'Post amp']] },
+  { sym: 'FX3', label: 'FX 3', list: 'fx', group: 'delay', enable: 'FX3Enable', extras: [['FX3Mix', 'Mix'], ['FX3Post', 'Post amp']] },
+  { sym: 'Amp', label: 'Amp', list: 'amp', group: 'amp', enable: 'AmpEnable', extras: [['ChannelVolume', 'Volume']] },
+  { sym: 'StudioCab', label: 'Cab', list: 'cab', group: 'cab', enable: 'CabEnable' },
+  { sym: 'FX4', label: 'Reverb', list: 'reverb', group: 'reverb', enable: 'FX4Enable', extras: [['FX4Mix', 'Mix'], ['FX4Post', 'Post amp']] },
   { sym: 'PostComp', label: 'Comp', enable: 'PostCompEnable' },
   { sym: 'PostEQ', label: 'EQ', enable: 'PostEQEnable' },
   { sym: 'VolumePedal', label: 'Volume', enable: 'VolumePedalEnable', extras: [['VolumePost', 'Post amp']] },
@@ -78,8 +95,11 @@ export function splitCab(sym: string): { cab: string; mic: number } {
 
 const msgType = (t: VType) => (t === VType.Float ? MsgType.Float : t === VType.Bool ? MsgType.Bool : MsgType.Int);
 
-// "LowShelfFreqState" -> "Low Shelf Freq"
-export const humanize = (s: string) => s.replace(/State$/, '').replace(/([a-z])([A-Z0-9])/g, '$1 $2').replace(/_/g, ' ');
+// "LowShelfFreqState" -> "Low Shelf Freq", "4x12Green25sStudio" -> "4x12 Green 25s Studio",
+// "Line6Vetta" -> "Line 6 Vetta". Names without the model catalog are made this way.
+export const humanize = (s: string) => s.replace(/State$/, '')
+  .replace(/([a-z])([A-Z])/g, '$1 $2').replace(/([a-z]{2})(\d)/g, '$1 $2').replace(/(\d)([A-Z])/g, '$1 $2')
+  .replace(/_/g, ' ');
 
 export function shortModelName(sym: string): string {
   const m = catalog.models[sym] ?? catalog.models[splitCab(sym).cab];
@@ -163,7 +183,7 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
 
     slots.push({
       sym: def.sym, label: def.label, id: blk.id, model: blk.model, modelSym,
-      modelName: modelName(modelSym), shortName: shortModelName(modelSym), group: cat?.group ?? 'fixed', list: def.list,
+      modelName: modelName(modelSym), shortName: shortModelName(modelSym), group: cat?.group ?? def.group ?? 'fixed', list: def.list,
       enable: def.enable ? rootControl(def.enable, 'On', `${tone.id}:${def.enable}`) : undefined,
       params, extras, mic,
     });
@@ -171,7 +191,8 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
   return slots;
 }
 
-// Model choices for a slot, restricted to models this firmware knows.
+// Model choices for a slot, restricted to models this firmware knows. Empty
+// without a catalog.
 export function modelChoices(list: ModelList, st: SymbolTable): { category: string; models: { sym: string; id: number; name: string }[] }[] {
   return catalog.lists[list].map(({ category, models }) => ({
     category,

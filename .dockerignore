@@ -4,4 +4,7 @@
 !app
 app/node_modules
 app/dist
+# Line 6's model catalog, if made locally; images load it at runtime instead.
+app/src/lib/catalog.json
 !test/fixtures/spiderv20-mkii-session.json
+!test/fixtures/test-catalog.json

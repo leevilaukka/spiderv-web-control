@@ -6,6 +6,7 @@
   import ShareDialog from './ShareDialog.svelte';
   import { remote } from '../remote.svelte';
   import { keepAwake } from '../keepawake.svelte';
+  import { catalogStore } from '../catalog.svelte';
 
   const short = $derived(amp.demo ? 'Demo amp' : amp.label.replace(/ MIDI \d+$/, ''));
   const awake = $derived(
@@ -29,6 +30,10 @@
     <button class="item" role="menuitem" onclick={() => { close(); amp.refresh(); }}>
       Re-read tone
       <small>Fetch the current tone from the amp again</small>
+    </button>
+    <button class="item" role="menuitem" onclick={() => { close(); catalogStore.dialogOpen = true; }}>
+      Model catalog…
+      <small>{catalogStore.loaded ? `${catalogStore.models} models loaded` : 'Load model names and lists from the Spider Remote app'}</small>
     </button>
     <button class="item" role="menuitem" onclick={() => { close(); controls.dialogOpen = true; }}>
       Controls and MIDI pedals…

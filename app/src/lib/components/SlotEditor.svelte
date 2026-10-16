@@ -6,10 +6,13 @@
   import Knob from './Knob.svelte';
   import Switch from './Switch.svelte';
   import Stepper from './Stepper.svelte';
+  import { catalogStore } from '../catalog.svelte';
 
   let { slot }: { slot: Slot } = $props();
 
-  const choices = $derived(slot.list && amp.client?.symbols ? modelChoices(slot.list, amp.client.symbols) : []);
+  const choices = $derived(catalogStore.version >= 0 && slot.list && amp.client?.symbols ? modelChoices(slot.list, amp.client.symbols) : []);
+  // Without the model catalog the model lists are unknown.
+  const noList = $derived(!!slot.list && !choices.length);
   const cab = $derived(slot.sym === 'StudioCab' ? amp.cabOf(slot) : null);
   const cabValue = $derived(cab ? (slot.modelSym === 'NoCabinet' ? '@NoCabinet' : cab.cab) : '');
   const color = $derived(groupColor(slot.group));
@@ -52,7 +55,12 @@
     </div>
 
     <div class="pickers">
-      {#if slot.list === 'cab' && cab}
+      {#if noList}
+        <label class="field">
+          <span>{slot.list === 'cab' ? 'Cabinet' : 'Model'}</span>
+          <select disabled><option>{cab ? slot.shortName : slot.modelName}</option></select>
+        </label>
+      {:else if slot.list === 'cab' && cab}
         <label class="field">
           <span>Cabinet</span>
           <select value={cabValue} onchange={(e) => amp.changeCab(slot, e.currentTarget.value, cab.mic)}>
@@ -63,6 +71,8 @@
             {/each}
           </select>
         </label>
+      {/if}
+      {#if slot.list === 'cab' && cab}
         {#if cab.mic >= 0}
           <label class="field">
             <span>Mic</span>
@@ -73,7 +83,7 @@
             </select>
           </label>
         {/if}
-      {:else if slot.list}
+      {:else if slot.list && !noList}
         <label class="field">
           <span>Model</span>
           <select value={slot.model} onchange={(e) => amp.changeModel(slot, Number(e.currentTarget.value))}>
@@ -86,6 +96,9 @@
             {/each}
           </select>
         </label>
+      {/if}
+      {#if noList}
+        <button class="catalog" onclick={() => (catalogStore.dialogOpen = true)}>Load the model list…</button>
       {/if}
     </div>
   </header>
@@ -183,6 +196,20 @@
     max-width: 100%;
   }
   select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  select:disabled { opacity: 0.7; }
+  .catalog {
+    align-self: flex-end;
+    font: inherit;
+    font-size: 13px;
+    color: var(--accent);
+    background: none;
+    border: 1px dashed var(--line);
+    border-radius: 8px;
+    padding: 7px 12px;
+    cursor: pointer;
+  }
+  .catalog:hover { border-color: var(--accent); }
+  .catalog:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   .controls {
     display: flex;
     flex-wrap: wrap;

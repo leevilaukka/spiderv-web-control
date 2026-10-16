@@ -5,6 +5,7 @@
   import type { ProviderId } from '../ai/provider';
   import type { Change } from '../tonedesign';
   import { keyLabel } from '../keys.svelte';
+  import { catalogStore } from '../catalog.svelte';
 
   const SUGGESTIONS = [
     'Warm jazz clean with a touch of room reverb',
@@ -114,7 +115,15 @@
       <button class="close" aria-label="Close tone assistant" onclick={() => (assistant.open = false)}>✕</button>
     </header>
 
-    {#if showRecent}
+    {#if catalogStore.origin === 'none'}
+      <div class="log">
+        <p class="intro">
+          The assistant builds tones from the amp's models, so it needs the model catalog from Line 6's Spider Remote app.
+          Load it once and the assistant is ready.
+        </p>
+        <button class="link" onclick={() => (catalogStore.dialogOpen = true)}>Load the model catalog…</button>
+      </div>
+    {:else if showRecent}
       <div class="log">
         <p class="intro">
           The last {assistant.recent.length === 1 ? 'tone' : `${assistant.recent.length} tones`} the assistant made, kept in this browser.

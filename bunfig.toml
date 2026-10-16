@@ -1,0 +1,3 @@
+[test]
+# Loads the test model catalog (the real one isn't part of the project).
+preload = ["./test/setup.ts"]

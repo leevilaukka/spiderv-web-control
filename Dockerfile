@@ -7,8 +7,8 @@ WORKDIR /src/app
 COPY app/package.json app/bun.lock ./
 RUN bun install --frozen-lockfile
 COPY app/ ./
-# Demo mode bundles the recorded session from the tests.
-COPY test/fixtures/spiderv20-mkii-session.json /src/test/fixtures/
+# Demo mode bundles the recorded session and test catalog from the tests.
+COPY test/fixtures/spiderv20-mkii-session.json test/fixtures/test-catalog.json /src/test/fixtures/
 RUN bun run build \
  && bun build server.ts --target=bun --outfile=/out/server.js
 
