@@ -33,6 +33,8 @@ Tested with a Spider V 20 MkII on firmware 2.0.1.
 - **Tone assistant**: describe a sound and an AI model (Claude or Gemini, with your own API key)
   builds it on the amp from the model catalog, then refines it as you ask
 - **Listen**: play the amp's USB audio output through the browser
+- **Runs on an Android phone** with the amp plugged into it: install the [hosted app](#directly-on-a-phone-android)
+  from Chrome and it works offline, no computer needed
 - **Remote control from a phone**: a phone on the same Wi-Fi uses the amp plugged into the computer
   (scan a QR code), with the full app; shortcuts and channels stay in step on both. Works on iPhones too
 - Protocol console for sending raw commands
@@ -137,8 +139,25 @@ changes made over USB. Shortcuts and channels (normally kept in one browser) are
 
 ## Directly on a phone (Android)
 
-Web MIDI needs Chrome on Android (iOS browsers don't support it) and HTTPS. Plug the amp
-into the phone with a USB OTG adapter, then serve the app over HTTPS on your network:
+The app can run on an Android phone with the amp plugged into it, without a computer. You need
+Chrome (iOS browsers have no Web MIDI) and a USB OTG adapter or USB-C to USB-B cable.
+
+1. Open https://leevilaukka.github.io/spiderv-web-control/ in Chrome on the phone.
+2. Chrome menu → **Add to Home screen** (or **Install app**). From then on it opens full-screen
+   and works offline, so you can play with no network.
+3. Plug in the amp, open the app, tap **Connect** and allow MIDI.
+4. Load the [model catalog](#model-catalog) on the phone once: choose the Spider Remote APK
+   (an APK extractor app can save it from the installed Spider Remote). To bring your shortcuts,
+   channels and pedal setup from a computer, use **Export app settings** there and
+   **Import app settings…** on the phone.
+
+When a new version has downloaded, the app offers to reload; it never reloads by itself, so it
+won't drop the amp while you play. The hosted copy leaves out remote control, as it has no relay
+server; everything else is the same app. CI publishes it from `main` (`VITE_NO_RELAY=1 bun run build`
+makes the same build, which any static HTTPS host can serve).
+
+To serve it from your own computer instead (e.g. for a development version), serve the app over
+HTTPS on your network:
 
 ```sh
 mkdir -p .cache/dev-cert

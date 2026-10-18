@@ -12,10 +12,11 @@
   import Assistant from './lib/components/Assistant.svelte';
   import Stage from './lib/components/Stage.svelte';
   import CatalogDialog from './lib/components/CatalogDialog.svelte';
+  import UpdateBanner from './lib/components/UpdateBanner.svelte';
   import { controls } from './lib/controls.svelte';
   import { assistant } from './lib/assistant.svelte';
   import { WebMidiTransport } from './lib/protocol/webmidi';
-  import { normalizeCode, remote } from './lib/remote.svelte';
+  import { normalizeCode, relayAvailable, remote } from './lib/remote.svelte';
   import { importFile } from './lib/settings.svelte';
 
   const midi = WebMidiTransport.supported();
@@ -35,7 +36,7 @@
 
   const params = new URLSearchParams(location.search);
   // Opened from the QR code of a computer sharing its amp: be its remote.
-  const initialRemote = normalizeCode(params.get('remote') ?? '');
+  const initialRemote = relayAvailable ? normalizeCode(params.get('remote') ?? '') : '';
   let remoteParam = $state(initialRemote);
   let code = $state(initialRemote || remote.settings.lastJoined);
   if (initialRemote) remote.join(initialRemote);
@@ -48,6 +49,7 @@
 </script>
 
 <svelte:document onvisibilitychange={onVisible} />
+<UpdateBanner />
 
 {#if amp.status !== 'ready' && remoteParam}
   <main class="connect">
@@ -74,7 +76,7 @@
       <h1>Spider V Web Control</h1>
       <p>Edit tones on a Line 6 Spider V amp over USB, right from the browser.</p>
       <ol class="steps">
-        <li>Connect the amp to this computer with a USB cable and switch it on.</li>
+        <li>Connect the amp to this computer with a USB cable (or to an Android phone with a USB OTG adapter) and switch it on.</li>
         <li>Click <strong>Connect</strong> and allow MIDI access (with SysEx) when asked.</li>
       </ol>
       <div class="buttons">
@@ -85,31 +87,33 @@
       </div>
       {#if !midi}
         <p class="error" role="alert">
-          This browser doesn't support Web MIDI. Use Chromium or Google Chrome, or control an amp connected to another computer below.
+          This browser doesn't support Web MIDI. Use Chromium or Google Chrome{#if relayAvailable}, or control an amp connected to another computer below{/if}.
         </p>
       {/if}
       {#if amp.error}
         <p class="error" role="alert">{amp.error}</p>
       {/if}
-      <form class="join" onsubmit={(e) => { e.preventDefault(); remoteParam = normalizeCode(code); remote.join(remoteParam); }}>
-        <h2>Remote control</h2>
-        <p>
-          Is the amp connected to another computer running this app? Turn on <em>Remote control from a phone</em> in its
-          amp menu, then scan the QR code or enter the pairing code here.
-        </p>
-        <div class="row">
-          <input
-            aria-label="Pairing code"
-            placeholder="Pairing code"
-            autocapitalize="characters"
-            autocomplete="off"
-            spellcheck="false"
-            maxlength="12"
-            bind:value={code}
-          />
-          <button type="submit" disabled={!normalizeCode(code) || amp.status === 'connecting'}>Join</button>
-        </div>
-      </form>
+      {#if relayAvailable}
+        <form class="join" onsubmit={(e) => { e.preventDefault(); remoteParam = normalizeCode(code); remote.join(remoteParam); }}>
+          <h2>Remote control</h2>
+          <p>
+            Is the amp connected to another computer running this app? Turn on <em>Remote control from a phone</em> in its
+            amp menu, then scan the QR code or enter the pairing code here.
+          </p>
+          <div class="row">
+            <input
+              aria-label="Pairing code"
+              placeholder="Pairing code"
+              autocapitalize="characters"
+              autocomplete="off"
+              spellcheck="false"
+              maxlength="12"
+              bind:value={code}
+            />
+            <button type="submit" disabled={!normalizeCode(code) || amp.status === 'connecting'}>Join</button>
+          </div>
+        </form>
+      {/if}
     </div>
   </main>
 {:else}

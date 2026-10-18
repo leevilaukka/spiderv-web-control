@@ -3,7 +3,7 @@
 // localhost). A phone opening the app over plain http on the LAN gets the
 // older trick instead: a tiny silent video playing in a loop, which most
 // phones treat as "something is playing" but not all do.
-const VIDEO = '/keep-awake.mp4';
+const VIDEO = `${import.meta.env.BASE_URL}keep-awake.mp4`;
 
 class KeepAwake {
   // 'lock': wake lock held; 'video': using the video fallback; 'waiting':

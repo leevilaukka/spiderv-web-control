@@ -4,7 +4,7 @@
   import Menu from './Menu.svelte';
   import ControlsDialog from './ControlsDialog.svelte';
   import ShareDialog from './ShareDialog.svelte';
-  import { remote } from '../remote.svelte';
+  import { relayAvailable, remote } from '../remote.svelte';
   import { keepAwake } from '../keepawake.svelte';
   import { catalogStore } from '../catalog.svelte';
   import { exportSettings, importFile } from '../settings.svelte';
@@ -55,7 +55,7 @@
         <small>{awake}</small>
       </button>
     {/if}
-    {#if amp.hub}
+    {#if amp.hub && relayAvailable}
       <button class="item" role="menuitem" onclick={() => { close(); remote.dialogOpen = true; }}>
         Remote control from a phone…
         <small>{remote.settings.share ? (remote.online ? `Sharing, code ${remote.settings.code}` : 'Sharing is on') : 'Use a phone on the same Wi-Fi as a remote'}</small>

@@ -11,6 +11,10 @@ import { keepAwake } from './keepawake.svelte';
 import { catalogStore } from './catalog.svelte';
 
 const STORAGE_KEY = 'spiderv.remote';
+
+// Builds for static hosting (VITE_NO_RELAY=1, e.g. GitHub Pages) have no
+// relay server behind them, so they leave out sharing and joining.
+export const relayAvailable = !import.meta.env.VITE_NO_RELAY;
 const RETRY_MS = 3000;
 
 // keepAwake: a phone used as a remote keeps its screen on.
@@ -57,7 +61,7 @@ class Remote {
     $effect.root(() => {
       // Share while connected to an amp, if sharing is on.
       $effect(() => {
-        const want = this.settings.share && amp.status === 'ready' && !!amp.hub;
+        const want = relayAvailable && this.settings.share && amp.status === 'ready' && !!amp.hub;
         if (want && !this.ws) this.open();
         else if (!want && this.ws) this.close();
       });

@@ -19,5 +19,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["vite.config.ts", "remote-relay.ts", "relay.ts", "server.ts"]
+  "include": ["vite.config.ts", "remote-relay.ts", "relay.ts", "server.ts", "pwa.ts"]
 }
