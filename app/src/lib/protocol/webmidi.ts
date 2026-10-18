@@ -14,6 +14,8 @@ export class WebMidiTransport implements Transport {
     this.label = output.name ?? 'MIDI';
   }
 
+  static isAmp(port: MIDIPort) { return PORT_MATCH.test(port.name ?? ''); }
+
   static supported() { return typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator; }
 
   static async connect(): Promise<WebMidiTransport> {
@@ -24,7 +26,7 @@ export class WebMidiTransport implements Transport {
     } catch (e) {
       throw new Error(`MIDI access was denied (${(e as Error).message}). Allow MIDI with SysEx for this site.`);
     }
-    const pick = <T extends MIDIPort>(ports: Iterable<T>) => [...ports].find((p) => PORT_MATCH.test(p.name ?? ''));
+    const pick = <T extends MIDIPort>(ports: Iterable<T>) => [...ports].find(WebMidiTransport.isAmp);
     const input = pick(access.inputs.values()), output = pick(access.outputs.values());
     if (!input || !output) {
       const names = [...access.outputs.values()].map((p) => p.name).join(', ') || 'none';

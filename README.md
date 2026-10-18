@@ -53,7 +53,8 @@ bun run dev
 ```
 
 Open http://localhost:5173, connect the amp over USB, click **Connect**, and allow
-MIDI (with SysEx) access. Use `?demo` or **Try the demo** to run without an amp.
+MIDI (with SysEx) access. After that the app connects by itself when it opens with the amp plugged in,
+when you plug the amp in, and when the amp comes back after a dropout (until you choose **Disconnect**). Use `?demo` or **Try the demo** to run without an amp.
 Then load the [model catalog](#model-catalog) once, for model names and model changes.
 
 Edits and imported tones go to the amp's edit buffer. **Save…** writes the edit buffer

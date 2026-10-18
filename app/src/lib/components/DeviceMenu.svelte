@@ -5,6 +5,7 @@
   import ControlsDialog from './ControlsDialog.svelte';
   import ShareDialog from './ShareDialog.svelte';
   import { relayAvailable, remote } from '../remote.svelte';
+  import { autoConnect } from '../autoconnect.svelte';
   import { keepAwake } from '../keepawake.svelte';
   import { catalogStore } from '../catalog.svelte';
   import { exportSettings, importFile } from '../settings.svelte';
@@ -69,7 +70,7 @@
       Import app settings…
       <small>Replaces those kept in this browser; you can undo it</small>
     </button>
-    <button class="item" role="menuitem" onclick={() => { close(); amp.disconnect(); }}>
+    <button class="item" role="menuitem" onclick={() => { close(); if (!amp.demo && !amp.remoteCode) autoConnect.hold(); amp.disconnect(); }}>
       Disconnect
       <small>{amp.remoteCode ? 'Stop controlling the amp from here' : 'Close the tab to free the amp for other programs'}</small>
     </button>

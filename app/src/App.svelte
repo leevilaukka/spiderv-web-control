@@ -18,6 +18,7 @@
   import { WebMidiTransport } from './lib/protocol/webmidi';
   import { normalizeCode, relayAvailable, remote } from './lib/remote.svelte';
   import { importFile } from './lib/settings.svelte';
+  import { autoConnect } from './lib/autoconnect.svelte';
 
   const midi = WebMidiTransport.supported();
   const slot = $derived(amp.chain.find((s) => s.sym === amp.selected) ?? amp.chain[0]);
@@ -41,6 +42,7 @@
   let code = $state(initialRemote || remote.settings.lastJoined);
   if (initialRemote) remote.join(initialRemote);
   else if (params.has('demo')) amp.connect('demo');
+  else autoConnect.start();
 
   // Phones drop the connection when the screen locks; reconnect on return.
   function onVisible() {
@@ -77,7 +79,11 @@
       <p>Edit tones on a Line 6 Spider V amp over USB, right from the browser.</p>
       <ol class="steps">
         <li>Connect the amp to this computer with a USB cable (or to an Android phone with a USB OTG adapter) and switch it on.</li>
-        <li>Click <strong>Connect</strong> and allow MIDI access (with SysEx) when asked.</li>
+        {#if autoConnect.watching}
+          <li>The app connects by itself once the amp is plugged in, or click <strong>Connect</strong>.</li>
+        {:else}
+          <li>Click <strong>Connect</strong> and allow MIDI access (with SysEx) when asked. After that, the app connects by itself.</li>
+        {/if}
       </ol>
       <div class="buttons">
         <button class="primary" disabled={!midi || amp.status === 'connecting'} onclick={() => amp.connect('midi')}>
