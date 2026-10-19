@@ -21,16 +21,17 @@
 //   raw <ch> <cmd> [u32 words...] send a raw command, print the reply
 import fs from 'node:fs';
 import { SpiderV, type Transport } from 'spiderv-protocol/client';
-import { type Block, type Bytes, Channel, MsgType, SymbolTable, VType, i32, le32, toHex, typed, LibrarianCmd, blockId, modelId, paramId } from 'spiderv-protocol/codec';
+import { SysexFramer } from 'spiderv-protocol/framing';
+import { type Block, type ByteLike, type Bytes, Channel, MsgType, SymbolTable, VType, i32, le32, toHex, typed, LibrarianCmd, concat, blockId, modelId, paramId } from 'spiderv-protocol/codec';
 import { applyImport, planImport, readToneFile } from '../app/src/lib/presetfile';
 
 class RawMidiTransport implements Transport {
   label: string;
-  onsysex: (b: Bytes) => void = () => {};
+  onsysex: (b: ByteLike) => void = () => {};
   ondisconnect: (e?: unknown) => void = () => {};
   private fd: number;
   private timer: ReturnType<typeof setInterval>;
-  private buf: Bytes = [];
+  private framer = new SysexFramer((b) => this.onsysex(b));
 
   // Non-blocking polling: blocking reads on a rawmidi node tie up a thread
   // and keep the process alive.
@@ -57,12 +58,7 @@ class RawMidiTransport implements Transport {
       if ((e as NodeJS.ErrnoException).code !== 'EAGAIN') { clearInterval(this.timer); this.ondisconnect(e); }
       return 0;
     }
-    for (const b of chunk.subarray(0, n)) {
-      if (b === 0xf0) this.buf = [];
-      if (b & 0x80 && b !== 0xf0 && b !== 0xf7 && b < 0xf8) { this.buf = []; continue; }
-      this.buf.push(b);
-      if (b === 0xf7 && this.buf[0] === 0xf0) { this.onsysex(this.buf); this.buf = []; }
-    }
+    this.framer.push(chunk.subarray(0, n));
     return n;
   }
 
@@ -93,7 +89,7 @@ const [cmd = 'info', ...rest] = args;
 
 const cacheFile = new URL('../.cache/symboltable.bin', import.meta.url);
 let cached: Bytes | null = null;
-try { cached = [...fs.readFileSync(cacheFile)]; } catch {}
+try { cached = new Uint8Array(fs.readFileSync(cacheFile)); } catch {}
 
 let transport: RawMidiTransport;
 try {
@@ -216,7 +212,7 @@ try {
       break;
     }
     case 'raw': {
-      const r = await amp.requestRaw(Number(rest[0]), Number(rest[1]), rest.slice(2).flatMap((w) => le32(Number(w))));
+      const r = await amp.requestRaw(Number(rest[0]), Number(rest[1]), concat(...rest.slice(2).map((w) => le32(Number(w)))));
       console.log(`reply kind ${r.kind}, ${r.body.length} bytes\n${toHex(r.body)}`);
       break;
     }

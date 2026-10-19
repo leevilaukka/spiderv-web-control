@@ -2,7 +2,7 @@
 // as the real amp, starting from a session recorded with
 // `bun tools/spiderv-cli.ts record`.
 import {
-  type BlockId, type Bytes, type Entry, type ParamId, Channel, EditorCmd, Kind, LibrarianCmd, MetaKey, MsgType, PresetKey, Reassembler, SymbolTable, SysParam, VType,
+  type BlockId, type ByteLike, type Bytes, type Entry, type ParamId, Channel, EditorCmd, Kind, LibrarianCmd, MetaKey, MsgType, PresetKey, Reassembler, SymbolTable, SysParam, VType,
   crc32, decodeTyped, encodeMessage, encodeSysex, encodeTyped, i32, le32, numeric, parseEntries, parseSysex, renamePresetData,
   paramId, serializeEntries, typed, u32,
 } from 'spiderv-protocol/codec';
@@ -19,11 +19,11 @@ export type Session = {
   editBuffer: string;  // base64 GetPresetFile(-1) reply body
 };
 
-const fromB64 = (s: string): Bytes => Array.from(atob(s), (c) => c.charCodeAt(0));
+const fromB64 = (s: string): Bytes => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 
 export class MockTransport implements Transport {
   label = 'Demo amp (simulated)';
-  onsysex: (b: Bytes) => void = () => {};
+  onsysex: (b: ByteLike) => void = () => {};
   ondisconnect: (e?: unknown) => void = () => {};
 
   private reasm = new Reassembler();
@@ -51,7 +51,7 @@ export class MockTransport implements Transport {
 
   async close() {}
 
-  private reply(channel: number, kind: Kind, body: Bytes) {
+  private reply(channel: number, kind: Kind, body: ByteLike) {
     const pkts = encodeSysex(this.device, channel, this.seq[channel], encodeMessage(kind, body));
     this.seq[channel] = (this.seq[channel] + 1) & 0x7f;
     setTimeout(() => pkts.forEach((p) => this.onsysex(p)), this.latency);
@@ -81,7 +81,7 @@ export class MockTransport implements Transport {
     this.reply(Channel.Editor, Kind.ParamChanged, [...le32(obj), ...le32(ctrl), ...encodeTyped(typed(MsgType.Float, value))]);
   }
 
-  private ok(ch: Channel, body: Bytes = le32(0)) { this.reply(ch, Kind.Reply, body); }
+  private ok(ch: Channel, body: ByteLike = le32(0)) { this.reply(ch, Kind.Reply, body); }
   private err(ch: Channel, status: number) { this.reply(ch, Kind.Reply, le32(status)); }
 
   private editor(cmd: number, body: Bytes) {

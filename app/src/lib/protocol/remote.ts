@@ -2,7 +2,7 @@
 // browser that is connected to it: SysEx travels over a WebSocket relay
 // (remote-relay.ts) to that browser's hub (hub.ts). Works without Web MIDI,
 // so iPhones can be remotes too.
-import type { Bytes } from 'spiderv-protocol/codec';
+import type { ByteLike, Bytes } from 'spiderv-protocol/codec';
 import type { Transport } from 'spiderv-protocol/client';
 
 // Messages between the host page and a remote, besides SysEx.
@@ -13,9 +13,13 @@ const HELLO_TIMEOUT = 6000;
 export const relayUrl = (params: Record<string, string>) =>
   `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/spiderv-remote?${new URLSearchParams(params)}`;
 
+// SysEx travels as JSON arrays of numbers (a Uint8Array would serialize as an object).
+export const toWire = (b: ByteLike): number[] => Array.from(b);
+export const fromWire = (data: number[]): Bytes => Uint8Array.from(data);
+
 export class RemoteTransport implements Transport {
   label = '';
-  onsysex: (b: Bytes) => void = () => {};
+  onsysex: (b: ByteLike) => void = () => {};
   ondisconnect: (e?: unknown) => void = () => {};
   // The host's greeting: its amp's label and the shared app state.
   hello: AppMessage = { t: 'hello' };
@@ -55,7 +59,7 @@ export class RemoteTransport implements Transport {
           resolve(t);
           return;
         }
-        if (m.t === 'sysex' && Array.isArray(m.data)) t.onsysex(m.data as Bytes);
+        if (m.t === 'sysex' && Array.isArray(m.data)) t.onsysex(fromWire(m.data));
         else if (m.t === 'gone') t.ondisconnect(new Error(String(m.reason ?? 'The amp was disconnected from the computer.')));
         else if (t.appHandler) t.appHandler(m);
         else t.backlog.push(m);
@@ -77,7 +81,7 @@ export class RemoteTransport implements Transport {
     if (this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(m));
   }
 
-  send(bytes: Bytes) { this.post({ t: 'sysex', data: bytes }); }
+  send(bytes: Bytes) { this.post({ t: 'sysex', data: toWire(bytes) }); }
 
   async close() {
     this.closing = true;

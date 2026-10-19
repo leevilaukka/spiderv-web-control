@@ -2,7 +2,17 @@
 // CRC32 and the preset ("tone") parser. Transport-agnostic.
 // See PROTOCOL.md for the reverse-engineering notes behind this file.
 
-export type Bytes = number[];
+// Bytes the library produces are always a Uint8Array. Functions that only read bytes take any
+// array-like of numbers, so plain arrays from other code (or MIDI libraries) work too.
+export type Bytes = Uint8Array;
+export type ByteLike = ArrayLike<number>;
+export const toBytes = (b: ByteLike): Bytes => (b instanceof Uint8Array ? b : Uint8Array.from(b));
+export function concat(...parts: ByteLike[]): Bytes {
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  let at = 0;
+  for (const p of parts) { out.set(p, at); at += p.length; }
+  return out;
+}
 
 // Ids in the amp's symbol table. Each kind has its own type, so a model id can't be passed where a
 // parameter id belongs. Get them from the SymbolTable (block(), model(), param(), state()), from a
@@ -17,9 +27,9 @@ export const modelId = (n: number) => n as ModelId;
 export const paramId = (n: number) => n as ParamId;
 export const stateId = (n: number) => n as StateId;
 
-export const LINE6_ID = [0x00, 0x01, 0x0c];
+export const LINE6_ID = [0x00, 0x01, 0x0c] as const;
 export const MSG_TYPE = 0x4d; // 'M': the channelled message stream
-export const IDENTITY_REQUEST: Bytes = [0xf0, 0x7e, 0x7f, 0x06, 0x01, 0xf7];
+export const IDENTITY_REQUEST: Bytes = Uint8Array.of(0xf0, 0x7e, 0x7f, 0x06, 0x01, 0xf7);
 
 // Two header bytes after the Line 6 ID: device family and member, taken from
 // the identity reply (Spider V 30 MkI: 22 00, Spider V 20 MkII: 22 05).
@@ -108,23 +118,23 @@ export const MetaKey = {
 
 // ---------------------------------------------------------------- bytes
 
-export const u32 = (b: Bytes, o: number) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
-export const i32 = (b: Bytes, o: number) => u32(b, o) | 0;
-export const le32 = (v: number): Bytes => [v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff];
+export const u32 = (b: ByteLike, o: number) => (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0;
+export const i32 = (b: ByteLike, o: number) => u32(b, o) | 0;
+export const le32 = (v: number): Bytes => Uint8Array.of(v & 0xff, (v >>> 8) & 0xff, (v >>> 16) & 0xff, (v >>> 24) & 0xff);
 
-export function f32(b: Bytes, o: number): number {
-  return new DataView(new Uint8Array(b.slice(o, o + 4)).buffer).getFloat32(0, true);
+export function f32(b: ByteLike, o: number): number {
+  return new DataView(toBytes(Array.prototype.slice.call(b, o, o + 4)).buffer).getFloat32(0, true);
 }
 
 export function leF32(v: number): Bytes {
-  const dv = new DataView(new ArrayBuffer(4));
-  dv.setFloat32(0, v, true);
-  return [0, 1, 2, 3].map((i) => dv.getUint8(i));
+  const out = new Uint8Array(4);
+  new DataView(out.buffer).setFloat32(0, v, true);
+  return out;
 }
 
-export const latin1 = (b: Bytes) => String.fromCharCode(...b);
-export const cString = (b: Bytes) => latin1(b).replace(/\0[\s\S]*$/, '');
-export const toHex = (b: Bytes) => b.map((x) => x.toString(16).padStart(2, '0')).join(' ');
+export const latin1 = (b: ByteLike) => String.fromCharCode(...Array.from(b));
+export const cString = (b: ByteLike) => latin1(b).replace(/\0[\s\S]*$/, '');
+export const toHex = (b: ByteLike) => Array.from(b, (x) => x.toString(16).padStart(2, '0')).join(' ');
 
 // ---------------------------------------------------------------- CRC32
 
@@ -139,9 +149,9 @@ const CRC_TABLE = (() => {
   return t;
 })();
 
-export function crc32(data: Bytes): number {
+export function crc32(data: ByteLike): number {
   let c = 0xffffffff;
-  for (const b of data) c = CRC_TABLE[(c ^ b) & 0xff] ^ (c >>> 8);
+  for (let i = 0; i < data.length; i++) c = CRC_TABLE[(c ^ data[i]) & 0xff] ^ (c >>> 8);
   return (c ^ 0xffffffff) >>> 0;
 }
 
@@ -149,11 +159,11 @@ export function crc32(data: Bytes): number {
 
 // Each group of up to 7 bytes is preceded by a byte holding their high bits;
 // bit 6 belongs to the first byte of the group. Groups are zero-padded.
-export function pack7(data: Bytes): Bytes {
-  const out: Bytes = [];
+export function pack7(data: ByteLike): Bytes {
+  const out: number[] = [];
   for (let i = 0; i < data.length; i += 7) {
     let hdr = 0;
-    const grp: Bytes = [];
+    const grp: number[] = [];
     for (let j = 0; j < 7; j++) {
       const b = data[i + j] ?? 0;
       if (b & 0x80) hdr |= 1 << (6 - j);
@@ -161,18 +171,18 @@ export function pack7(data: Bytes): Bytes {
     }
     out.push(hdr, ...grp);
   }
-  return out;
+  return Uint8Array.from(out);
 }
 
-export function unpack7(data: Bytes): Bytes {
-  const out: Bytes = [];
+export function unpack7(data: ByteLike): Bytes {
+  const out: number[] = [];
   for (let i = 0; i < data.length; i += 8) {
     const hdr = data[i];
     for (let j = 1; j < 8 && i + j < data.length; j++) {
       out.push(data[i + j] | ((hdr >> (7 - j)) & 1 ? 0x80 : 0));
     }
   }
-  return out;
+  return Uint8Array.from(out);
 }
 
 // ---------------------------------------------------------------- framing
@@ -183,16 +193,15 @@ const MAX_FRAGMENT = 256;
 // fragments sharing one sequence number; the three bytes after the sequence
 // give the offset of the fragment's last byte within the message as
 // (b0 << 8) | (b1 << 4) | b2 (b0 is 7 bits, b1/b2 are nibbles).
-export function encodeSysex(device: readonly number[], channel: number, seq: number, message: Bytes): Bytes[] {
+export function encodeSysex(device: readonly number[], channel: number, seq: number, message: ByteLike): Bytes[] {
   const packets: Bytes[] = [];
   for (let start = 0; start < message.length; start += MAX_FRAGMENT) {
-    const frag = message.slice(start, start + MAX_FRAGMENT);
+    const frag = Array.prototype.slice.call(message, start, start + MAX_FRAGMENT) as number[];
     const end = start + frag.length - 1;
-    packets.push([
-      0xf0, ...LINE6_ID, device[0], device[1], MSG_TYPE,
-      channel, seq & 0x7f, (end >> 8) & 0x7f, (end >> 4) & 0x0f, end & 0x0f,
-      ...pack7(frag), 0xf7,
-    ]);
+    packets.push(concat(
+      [0xf0, ...LINE6_ID, device[0], device[1], MSG_TYPE, channel, seq & 0x7f, (end >> 8) & 0x7f, (end >> 4) & 0x0f, end & 0x0f],
+      pack7(frag), [0xf7],
+    ));
   }
   return packets;
 }
@@ -205,8 +214,8 @@ export type Parsed =
   | { type: 'info'; device: [number, number]; info: Record<string, string> }
   | { type: 'other'; bytes: Bytes };
 
-export function parseSysex(bytes: ArrayLike<number>): Parsed {
-  const b = Array.from(bytes);
+export function parseSysex(bytes: ByteLike): Parsed {
+  const b = toBytes(bytes);
   if (b[0] !== 0xf0 || b[b.length - 1] !== 0xf7) return { type: 'other', bytes: b };
   if (b[1] === 0x7e && b[3] === 0x06 && b[4] === 0x02) {
     return { type: 'identity', family: b[8] | (b[9] << 7), member: b[10] | (b[11] << 7), version: b.slice(12, 16) };
@@ -238,7 +247,7 @@ export type Message = { channel: number; kind: number; body: Bytes };
 // (spanSeq = true, used when decoding host traffic); from the amp, a new seq
 // always starts a new message, so leftovers are dropped rather than merged.
 export class Reassembler {
-  private streams = new Map<number, { buf: Bytes; seq: number; end: number }>();
+  private streams = new Map<number, { buf: number[]; seq: number; end: number }>();
   dropped = 0;
 
   constructor(private spanSeq = true) {}
@@ -251,7 +260,7 @@ export class Reassembler {
       st.buf = [];
     }
     const start = frag.seq === st.seq ? st.end + 1 : 0;
-    st.buf.push(...frag.payload.slice(0, Math.max(0, frag.end + 1 - start)));
+    for (const b of frag.payload.subarray(0, Math.max(0, frag.end + 1 - start))) st.buf.push(b);
     st.seq = frag.seq;
     st.end = frag.end;
     const out: Message[] = [];
@@ -259,7 +268,7 @@ export class Reassembler {
       const len = u32(st.buf, 4);
       if (st.buf.length < 8 + len) break;
       const m = st.buf.splice(0, 8 + len);
-      out.push({ channel: frag.channel, kind: u32(m, 0), body: m.slice(8) });
+      out.push({ channel: frag.channel, kind: u32(m, 0), body: Uint8Array.from(m.slice(8)) });
     }
     return out;
   }
@@ -267,7 +276,7 @@ export class Reassembler {
 
 // ---------------------------------------------------------------- messages
 
-export const encodeMessage = (cmd: number, body: Bytes = []): Bytes => [...le32(cmd), ...le32(body.length), ...body];
+export const encodeMessage = (cmd: number, body: ByteLike = []): Bytes => concat(le32(cmd), le32(body.length), body);
 
 // A value as the amp sends and takes it: floats and ints are numbers, bools are booleans.
 export type TypedValue =
@@ -282,10 +291,10 @@ export const typed = (type: MsgType, n: number): TypedValue =>
 export const numeric = (v: TypedValue): number => (typeof v.value === 'boolean' ? Number(v.value) : v.value);
 
 export function encodeTyped(v: TypedValue): Bytes {
-  return [...le32(v.type), ...(v.type === MsgType.Float ? leF32(v.value) : le32(numeric(v) | 0))];
+  return concat(le32(v.type), v.type === MsgType.Float ? leF32(v.value) : le32(numeric(v) | 0));
 }
 
-export function decodeTyped(b: Bytes, o: number): TypedValue {
+export function decodeTyped(b: ByteLike, o: number): TypedValue {
   const type = u32(b, o) as MsgType;
   if (type === MsgType.Float) return { type, value: f32(b, o + 4) };
   return typed(type, i32(b, o + 4));
@@ -293,13 +302,14 @@ export function decodeTyped(b: Bytes, o: number): TypedValue {
 
 export type ParamChange = { obj: BlockId; param: ParamId } & TypedValue;
 
-export function decodeParamChange(body: Bytes): ParamChange {
+export function decodeParamChange(body: ByteLike): ParamChange {
   return { obj: blockId(u32(body, 0)), param: paramId(u32(body, 4)), ...decodeTyped(body, 8) };
 }
 
 // GetPresetInfo reply body: 20 bytes of metadata, then a length-prefixed name.
-export function decodePresetInfo(body: Bytes): { meta: Bytes; name: string } {
-  return { meta: body.slice(0, 20), name: cString(body.slice(24, 24 + u32(body, 20))) };
+export function decodePresetInfo(body: ByteLike): { meta: Bytes; name: string } {
+  const b = toBytes(body);
+  return { meta: b.slice(0, 20), name: cString(b.subarray(24, 24 + u32(b, 20))) };
 }
 
 // ---------------------------------------------------------------- presets
@@ -311,7 +321,8 @@ export type Preset = { name: string; header: Record<number, Entry['value']>; sec
 
 // Parse the typed key/value stream of a preset file (GetPresetFile reply
 // without its leading status word; also what SetPresetFile takes).
-export function parseEntries(data: Bytes): Entry[] {
+export function parseEntries(input: ByteLike): Entry[] {
+  const data = toBytes(input);
   let p = 0;
   const entries: Entry[] = [];
   while (p + 6 <= data.length) {
@@ -323,7 +334,7 @@ export function parseEntries(data: Bytes): Entry[] {
     else if (type === VType.Float) { value = f32(data, p); p += 4; }
     else if (type === VType.String) {
       const n = u32(data, p);
-      value = cString(data.slice(p + 4, p + 4 + n));
+      value = cString(data.subarray(p + 4, p + 4 + n));
       p += 4 + n;
     } else if (type !== VType.None) {
       throw new Error(`unknown value type ${type} at offset ${p - 6}`);
@@ -334,7 +345,7 @@ export function parseEntries(data: Bytes): Entry[] {
 }
 
 export function serializeEntries(entries: Entry[]): Bytes {
-  const out: Bytes = [];
+  const out: number[] = [];
   for (const e of entries) {
     out.push(...le32(e.key), e.type & 0xff, e.type >> 8);
     if (e.type === VType.Float) out.push(...leF32(e.value as number));
@@ -343,7 +354,7 @@ export function serializeEntries(entries: Entry[]): Bytes {
       out.push(...le32(s.length), ...s);
     } else if (e.type !== VType.None) out.push(...le32(e.value as number));
   }
-  return out;
+  return Uint8Array.from(out);
 }
 
 // Spider Remote truncates names (and labels) to 63 bytes before saving.
@@ -372,7 +383,7 @@ const cleanText = (s: string) => s.replace(/[^\x20-\x7e]/g, '?').slice(0, PRESET
 
 // Returns preset file bytes with updated metadata. Fields the preset file
 // doesn't already contain are left out rather than invented.
-export function setPresetMeta(data: Bytes, meta: PresetMeta): Bytes {
+export function setPresetMeta(data: ByteLike, meta: PresetMeta): Bytes {
   const entries = parseEntries(data);
   // Metadata lives in the first section (PRSP), before its section end.
   const end = entries.findIndex((e) => e.key === MetaKey.SectionEnd);
@@ -397,11 +408,11 @@ export function setPresetMeta(data: Bytes, meta: PresetMeta): Bytes {
   return serializeEntries(entries);
 }
 
-export const renamePresetData = (data: Bytes, name: string) => setPresetMeta(data, { name });
+export const renamePresetData = (data: ByteLike, name: string) => setPresetMeta(data, { name });
 
 // Parse a GetPresetFile reply body (status word + preset file).
-export function parsePreset(body: Bytes): Preset {
-  const entries = parseEntries(body.slice(4));
+export function parsePreset(body: ByteLike): Preset {
+  const entries = parseEntries(toBytes(body).subarray(4));
 
   const preset: Preset = { name: '', header: {}, sections: [], tone: null };
   let section: Section | null = null;
@@ -448,12 +459,15 @@ export class SymbolTable {
   readonly names: string[] = [];
   private ids = new Map<string, number>();
 
-  constructor(readonly bytes: Bytes) {
+  readonly bytes: Bytes;
+
+  constructor(table: ByteLike) {
+    const bytes = (this.bytes = toBytes(table));
     const n = u32(bytes, 0);
     const pool = 8 + n * 12;
     for (let i = 0; i < n; i++) {
       const off = u32(bytes, 8 + i * 12), len = u32(bytes, 16 + i * 12);
-      const name = latin1(bytes.slice(pool + off, pool + off + len));
+      const name = latin1(bytes.subarray(pool + off, pool + off + len));
       this.names.push(name);
       if (!this.ids.has(name)) this.ids.set(name, i);
     }

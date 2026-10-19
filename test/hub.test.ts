@@ -78,5 +78,5 @@ test('answers requests itself only once the symbol table is known', async () => 
   // Before the hub knows the table, the handshake reaches the amp.
   await c.connect();
   const r = await c.request(Channel.Editor, EditorCmd.Handshake, [0, 0, 0, 0]);
-  expect(r.body).toEqual([0xf9, 0xff, 0xff, 0xff]); // -7 from the amp
+  expect(Array.from(r.body)).toEqual([0xf9, 0xff, 0xff, 0xff]); // -7 from the amp
 });

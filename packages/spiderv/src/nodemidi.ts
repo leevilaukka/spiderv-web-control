@@ -1,6 +1,6 @@
 // Node transport over @julusian/midi (an optional peer dependency; prebuilt
 // RtMidi bindings for Linux, macOS and Windows). Finds the amp by port name.
-import type { Bytes } from './codec';
+import type { ByteLike, Bytes } from './codec';
 import type { Transport } from './client';
 import { SysexFramer } from './framing';
 
@@ -28,7 +28,7 @@ const find = (port: MidiPort) => {
 
 export class NodeMidiTransport implements Transport {
   label: string;
-  onsysex: (b: Bytes) => void = () => {};
+  onsysex: (b: ByteLike) => void = () => {};
   ondisconnect: (e?: unknown) => void = () => {};
   private framer = new SysexFramer((b) => this.onsysex(b));
 
@@ -59,7 +59,7 @@ export class NodeMidiTransport implements Transport {
     return new NodeMidiTransport(input, output, label);
   }
 
-  send(bytes: Bytes) { this.output.send(bytes); }
+  send(bytes: Bytes) { this.output.send(Array.from(bytes)); }
 
   async close() {
     this.input.removeAllListeners();

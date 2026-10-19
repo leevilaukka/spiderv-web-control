@@ -92,16 +92,20 @@ Parameters and models are addressed by symbol id. Look ids up in `amp.symbols` o
 a parsed preset.
 
 ```ts
+import { typed, MsgType } from 'spiderv-protocol/codec';
+
 const preset = await amp.readPreset(); // the edit buffer
 for (const block of preset.tone?.children ?? []) {
   console.log(amp.name(block.id), '->', amp.name(block.model));
 }
 
 // Read and set one knob. obj is a block id, param a parameter id.
-const obj = preset.tone!.children[0].id;
-const param = amp.symbols!.id('<parameter name>')!; // list the names with amp.symbols.names
-const v = await amp.getParam(obj, param);               // { type, value }
-await amp.setParam(obj, param, { type: v.type, value: 0.5 });
+const obj = preset.tone!.children[0].id;                 // a BlockId
+const param = amp.symbols!.param('<parameter name>')!;   // a ParamId; list the names with amp.symbols.names
+const switchParam = amp.symbols!.param('<a bool parameter>')!;
+const v = await amp.getParam(obj, param);                // { type: Float, value: 0.42 }
+await amp.setParam(obj, param, typed(MsgType.Float, 0.5));
+await amp.setParam(obj, switchParam, { type: MsgType.Bool, value: false }); // bool parameters take booleans
 ```
 
 | Method | Does |
@@ -112,6 +116,27 @@ await amp.setParam(obj, param, { type: v.type, value: 0.5 });
 | `getPresetKey(key)` / `setPresetKey(key, value)` | edit-buffer preset settings that live outside the tone blocks (`PresetKey`: tempo, label, speaker mode, ...) |
 
 Edits go to the amp's edit buffer. Nothing is stored in a slot until you `savePreset`.
+
+### Types
+
+The API is typed so the common mix-ups don't compile:
+
+- **Values.** A `TypedValue` is `{ type: Float | Int, value: number }` or `{ type: Bool, value: boolean }`.
+  `typed(type, number)` builds one from a number (non-zero is `true` for bools) and `numeric(v)` gives
+  the number back.
+- **Ids.** Symbol ids come in four kinds, `BlockId`, `ModelId`, `ParamId` and `StateId`, and a
+  function takes only the right kind: `setParam(BlockId, ParamId, ...)`, `loadModel(BlockId, ModelId)`.
+  Get them from the symbol table (`symbols.block(name)`, `.model(name)`, `.param(name)`, `.state(name)`),
+  from a parsed preset (`block.id`, `block.model`) or from `param` events. If you hold a plain number,
+  tag it with `blockId(n)`, `modelId(n)`, `paramId(n)` or `stateId(n)`. `symbols.id(name)` gives an
+  untagged `SymbolId`, which is only good for lookups like `amp.name(id)`.
+- **Commands.** `EditorCmd` and `LibrarianCmd` values are different types, and `request(channel, cmd)`
+  only takes a command with its own channel (`request(Channel.Editor, EditorCmd.GetVersion)`).
+  For a command this library doesn't know yet, use `requestRaw(channel, cmd, body)` with plain numbers.
+  The request body is raw bytes; the methods above build and read the bodies for you.
+- **Bytes.** Everything the library hands you is a `Uint8Array`. Anything that only reads bytes
+  accepts any array-like of numbers, so plain arrays work too. (`JSON.stringify` turns a `Uint8Array`
+  into an object, so convert with `Array.from` before sending bytes through JSON.)
 
 ### Events
 
@@ -147,9 +172,9 @@ A `Transport` moves SysEx bytes and nothing else, so the client works over anyth
 ```ts
 interface Transport {
   label: string;
-  onsysex: (bytes: number[]) => void;      // set by the client; call it once per complete F0..F7 message
+  onsysex: (bytes: ArrayLike<number>) => void; // set by the client; call it once per complete F0..F7 message
   ondisconnect: (err?: unknown) => void;   // set by the client; call it when the link drops
-  send(bytes: number[]): void;
+  send(bytes: Uint8Array): void;
   close(): Promise<void>;
 }
 ```

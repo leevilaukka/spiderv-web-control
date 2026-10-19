@@ -1,6 +1,6 @@
 // Session client: handshake, request/reply on the two channels, events.
 import {
-  type BlockId, type Bytes, type EditorCmdId, type LibrarianCmdId, type Identity, type ModelId, type ParamId, type PresetKeyId,
+  type BlockId, type ByteLike, type Bytes, concat, toBytes, type EditorCmdId, type LibrarianCmdId, type Identity, type ModelId, type ParamId, type PresetKeyId,
   type Message, type ParamChange, type Preset, type TypedValue,
   Channel, DEFAULT_DEVICE, EditorCmd, IDENTITY_REQUEST, Kind, LibrarianCmd, MsgType, Reassembler, SymbolTable, SysParam,
   crc32, decodeParamChange, numeric, decodePresetInfo, decodeTyped, encodeMessage, encodeSysex, encodeTyped, parseEntries, setPresetMeta, type PresetMeta,
@@ -9,7 +9,7 @@ import {
 
 export interface Transport {
   label: string;
-  onsysex: (bytes: Bytes) => void;
+  onsysex: (bytes: ByteLike) => void; // set by the client; call it once per complete F0..F7 message
   ondisconnect: (err?: unknown) => void;
   send(bytes: Bytes): void;
   close(): Promise<void>;
@@ -50,7 +50,7 @@ export class SpiderV {
   private listeners: { [K in keyof ClientEvents]?: ((v: ClientEvents[K]) => void)[] } = {};
 
   // symbolTable: a previously fetched table to try before downloading one.
-  constructor(readonly transport: Transport, private cachedSymbols: Bytes | null = null) {
+  constructor(readonly transport: Transport, private cachedSymbols: ByteLike | null = null) {
     transport.onsysex = (b) => this.onSysex(b);
     transport.ondisconnect = (e) => this.emit('disconnect', e);
   }
@@ -73,7 +73,8 @@ export class SpiderV {
 
   // ------------------------------------------------------------ receive
 
-  private onSysex(bytes: Bytes) {
+  private onSysex(input: ByteLike) {
+    const bytes = toBytes(input);
     const p = parseSysex(bytes);
     if (p.type === 'identity') {
       this.identity = p;
@@ -124,14 +125,14 @@ export class SpiderV {
 
   // One request per channel is in flight at a time; later calls queue. The command must belong
   // to the channel (EditorCmd on Channel.Editor, LibrarianCmd on Channel.Librarian).
-  request(channel: Channel.Editor, cmd: EditorCmdId, body?: Bytes, opts?: RequestOptions): Promise<Message>;
-  request(channel: Channel.Librarian, cmd: LibrarianCmdId, body?: Bytes, opts?: RequestOptions): Promise<Message>;
-  request(channel: Channel, cmd: EditorCmdId | LibrarianCmdId, body: Bytes = [], opts: RequestOptions = {}): Promise<Message> {
+  request(channel: Channel.Editor, cmd: EditorCmdId, body?: ByteLike, opts?: RequestOptions): Promise<Message>;
+  request(channel: Channel.Librarian, cmd: LibrarianCmdId, body?: ByteLike, opts?: RequestOptions): Promise<Message>;
+  request(channel: Channel, cmd: EditorCmdId | LibrarianCmdId, body: ByteLike = [], opts: RequestOptions = {}): Promise<Message> {
     return this.requestRaw(channel, cmd, body, opts);
   }
 
   // The same with any numbers, for commands this library doesn't know yet.
-  requestRaw(channel: number, cmd: number, body: Bytes = [], { timeout = REPLY_TIMEOUT, text = '' }: RequestOptions = {}): Promise<Message> {
+  requestRaw(channel: number, cmd: number, body: ByteLike = [], { timeout = REPLY_TIMEOUT, text = '' }: RequestOptions = {}): Promise<Message> {
     const label = text || `ch${channel} cmd ${hex(cmd)}${body.length ? ' ' + toHex(body) : ''}`;
     const run = () => new Promise<Message>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -148,9 +149,9 @@ export class SpiderV {
   }
 
   // Requests whose reply starts with a status word; throws if it is negative.
-  private async checked(channel: Channel.Editor, cmd: EditorCmdId, body?: Bytes, opts?: RequestOptions): Promise<Message>;
-  private async checked(channel: Channel.Librarian, cmd: LibrarianCmdId, body?: Bytes, opts?: RequestOptions): Promise<Message>;
-  private async checked(channel: Channel, cmd: EditorCmdId | LibrarianCmdId, body: Bytes = [], opts?: RequestOptions) {
+  private async checked(channel: Channel.Editor, cmd: EditorCmdId, body?: ByteLike, opts?: RequestOptions): Promise<Message>;
+  private async checked(channel: Channel.Librarian, cmd: LibrarianCmdId, body?: ByteLike, opts?: RequestOptions): Promise<Message>;
+  private async checked(channel: Channel, cmd: EditorCmdId | LibrarianCmdId, body: ByteLike = [], opts?: RequestOptions) {
     const r = await this.requestRaw(channel, cmd, body, opts);
     const status = r.body.length >= 4 ? i32(r.body, 0) : 0;
     if (status < 0) throw new AmpError(`${opts?.text ?? hex(cmd)} failed (status ${status})`, status);
@@ -166,7 +167,7 @@ export class SpiderV {
     for (let i = 0; i < 30 && this.identity === before; i++) await sleep(50);
   }
 
-  private async handshake(table: Bytes) {
+  private async handshake(table: ByteLike) {
     const r = await this.request(Channel.Editor, EditorCmd.Handshake, le32(crc32(table)), { text: 'handshake' });
     return i32(r.body, 0);
   }
@@ -229,10 +230,10 @@ export class SpiderV {
 
   // Writes a preset file to a slot in the amp's memory (or -1: the edit
   // buffer). This is how Spider Remote saves: SetPresetFile(index, data).
-  async writePresetData(index: number, data: Bytes) {
+  async writePresetData(index: number, data: ByteLike) {
     if (!(index === -1 || (index >= 0 && index < this.presetCount))) throw new AmpError(`invalid preset slot ${index}`);
     parseEntries(data); // refuse to send anything that doesn't parse
-    await this.checked(Channel.Librarian, LibrarianCmd.SetPresetFile, [...le32(index), ...le32(data.length), ...data],
+    await this.checked(Channel.Librarian, LibrarianCmd.SetPresetFile, concat(le32(index), le32(data.length), data),
       { timeout: 15000, text: `write preset ${index} (${data.length} bytes)` });
     await sleep(300); // the official app waits after a write, too
   }

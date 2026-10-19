@@ -5,8 +5,8 @@
 // forwards requests one by one and routes each reply to the port that sent
 // the request. Events from the amp go to every port.
 import {
-  type Bytes, type Message, Channel, DEFAULT_DEVICE, EditorCmd, Kind, LibrarianCmd, Reassembler,
-  crc32, encodeMessage, encodeSysex, i32, le32, parseSysex, u32,
+  type ByteLike, type Bytes, type Message, Channel, DEFAULT_DEVICE, EditorCmd, Kind, LibrarianCmd, Reassembler,
+  crc32, encodeMessage, encodeSysex, i32, le32, parseSysex, toBytes, u32,
 } from './codec';
 import type { Transport } from './client';
 
@@ -20,7 +20,7 @@ const timeoutFor = (j: Job) =>
       : 5000;
 
 export class HubPort implements Transport {
-  onsysex: (b: Bytes) => void = () => {};
+  onsysex: (b: ByteLike) => void = () => {};
   ondisconnect: (e?: unknown) => void = () => {};
   readonly reasm = new Reassembler();
   readonly seq = [0, 0];
@@ -49,7 +49,7 @@ export class Hub {
   private identity: Bytes[] = [];
 
   constructor(readonly amp: Transport) {
-    amp.onsysex = (b) => this.fromAmp(b);
+    amp.onsysex = (b) => this.fromAmp(toBytes(b));
     amp.ondisconnect = (e) => { for (const p of this.ports) p.ondisconnect(e); };
   }
 
@@ -70,13 +70,13 @@ export class Hub {
 
   // ------------------------------------------------------------ from clients
 
-  fromPort(port: HubPort, bytes: Bytes) {
+  fromPort(port: HubPort, bytes: ByteLike) {
     if (!this.ports.has(port)) return;
     if (bytes[1] === 0x7e) {
       // Identity request: the amp's answer doesn't change, so answer from the
       // first one.
       if (this.identity.length) for (const b of this.identity) this.deliverRaw(port, b);
-      else this.amp.send(bytes);
+      else this.amp.send(toBytes(bytes));
       return;
     }
     const p = parseSysex(bytes);

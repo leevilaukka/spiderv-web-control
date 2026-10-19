@@ -8,6 +8,7 @@
     "build:exe": "bun run build && bun tools/build-exe.ts",
     "check": "cd app && bun run check",
     "test": "bun test",
+    "typecheck": "app/node_modules/.bin/tsc -p tsconfig.json",
     "cli": "bun tools/spiderv-cli.ts",
     "build:lib": "cd packages/spiderv && bun build.ts"
   },

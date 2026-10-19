@@ -1,6 +1,6 @@
 // Application state: one connected amp, its presets and the current tone.
 import { SpiderV, type LogEntry, type Transport } from 'spiderv-protocol/client';
-import { type Bytes, type ModelId, type ParamChange, MsgType, PresetKey, i32, le32, numeric, typed } from 'spiderv-protocol/codec';
+import { type Bytes, type ModelId, type ParamChange, MsgType, PresetKey, i32, le32, numeric, typed, concat } from 'spiderv-protocol/codec';
 import { WebMidiTransport } from 'spiderv-protocol/webmidi';
 import { Hub } from 'spiderv-protocol/hub';
 import { RemoteTransport } from './protocol/remote';
@@ -21,7 +21,7 @@ const LOG_LIMIT = 400;
 const loadCachedSymbols = (): Bytes | null => {
   try {
     const s = localStorage.getItem(SYMBOLS_KEY);
-    return s ? Array.from(atob(s), (c) => c.charCodeAt(0)) : null;
+    return s ? Uint8Array.from(atob(s), (c) => c.charCodeAt(0)) : null;
   } catch { return null; }
 };
 const saveCachedSymbols = (b: Bytes) => {
@@ -574,7 +574,7 @@ export class Amp {
     if (!c?.symbols || this.importing) return;
     this.notice = null;
     try {
-      const bytes = [...new Uint8Array(await file.arrayBuffer())];
+      const bytes = new Uint8Array(await file.arrayBuffer());
       const tone = readToneFile(bytes, c.symbols);
       const { plan, applied, failed, refreshError } = await this.applyTone(tone, file.name);
       // Shortcuts and channels saved with the tone by this app come along;
@@ -736,7 +736,7 @@ export class Amp {
   async raw(channel: number, cmd: number, words: number[]) {
     if (!this.client) return;
     try {
-      const r = await this.client.requestRaw(channel, cmd, words.flatMap((w) => le32(w)));
+      const r = await this.client.requestRaw(channel, cmd, concat(...words.map((w) => le32(w))));
       if (r.body.length >= 4 && i32(r.body, 0) < 0) this.info(`status ${i32(r.body, 0)}`);
     } catch (e) {
       this.report(e);

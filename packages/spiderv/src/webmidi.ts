@@ -1,6 +1,6 @@
 // Web MIDI transport. The Spider V is a class-compliant USB-MIDI device, so
 // the OS exposes it as a MIDI port ("Spider V 20 MIDI 1" on Linux/ALSA).
-import type { Bytes } from './codec';
+import type { ByteLike, Bytes } from './codec';
 import type { Transport } from './client';
 import { SysexFramer } from './framing';
 
@@ -8,7 +8,7 @@ const PORT_MATCH = /spider ?v/i;
 
 export class WebMidiTransport implements Transport {
   label: string;
-  onsysex: (b: Bytes) => void = () => {};
+  onsysex: (b: ByteLike) => void = () => {};
   private framer = new SysexFramer((b) => this.onsysex(b));
   ondisconnect: (e?: unknown) => void = () => {};
 

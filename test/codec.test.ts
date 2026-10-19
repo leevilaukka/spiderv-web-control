@@ -4,7 +4,7 @@ import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import {
   type Message, EditorCmd, Kind, LibrarianCmd, MsgType, Reassembler, crc32, decodeParamChange, decodePresetInfo,
-  encodeMessage, encodeSysex, encodeTyped, blockId, le32, paramId, pack7, parsePreset, parseSysex, unpack7,
+  encodeMessage, encodeSysex, concat, encodeTyped, blockId, le32, paramId, pack7, parsePreset, parseSysex, unpack7,
 } from 'spiderv-protocol/codec';
 
 const capture = readFileSync(new URL('./fixtures/spiderv30-remote-capture.txt', import.meta.url), 'utf8')
@@ -29,8 +29,8 @@ function decodeAll(fromAmp: boolean) {
 
 test('7-bit packing round-trips and matches the capture', () => {
   const data = Array.from({ length: 300 }, (_, i) => (i * 37) & 0xff);
-  expect(unpack7(pack7(data)).slice(0, data.length)).toEqual(data);
-  expect(pack7([0xe4, 0x11, 0x6f, 0xc3])).toEqual(hex('48 64 11 6f 43 00 00 00'));
+  expect(Array.from(unpack7(pack7(data)).slice(0, data.length))).toEqual(data);
+  expect(Array.from(pack7([0xe4, 0x11, 0x6f, 0xc3]))).toEqual(hex('48 64 11 6f 43 00 00 00'));
 });
 
 test('CRC32 is standard CRC-32', () => {
@@ -39,12 +39,12 @@ test('CRC32 is standard CRC-32', () => {
 
 test('encoder reproduces packets sent by Spider V Remote byte-for-byte', () => {
   const sent = new Set(capture.filter((c) => c.out).map((c) => c.bytes.join()));
-  const cases: [number, number, number[]][] = [
+  const cases: [number, number, ArrayLike<number>][] = [
     [0, 0, encodeMessage(EditorCmd.GetVersion)],
     [1, 3, encodeMessage(LibrarianCmd.GetPresetInfo, le32(0))],
     [1, 2, encodeMessage(LibrarianCmd.GetPresetFile, le32(-1))],
     [0, 3, encodeMessage(EditorCmd.GetFbvConnectivityStatus)],
-    [0, 16, [...le32(0x374), ...le32(0x350), ...encodeTyped({ type: MsgType.Bool, value: false })]],
+    [0, 16, concat(le32(0x374), le32(0x350), encodeTyped({ type: MsgType.Bool, value: false }))],
   ];
   for (const [ch, seq, msg] of cases) expect(sent.has(encodeSysex(MKI, ch, seq, msg)[0].join())).toBe(true);
 });
@@ -57,7 +57,7 @@ test('decodes identity and extended info', () => {
 
 test('reassembles host messages split across header and body packets', () => {
   const { msgs } = decodeAll(false);
-  expect(msgs.find((m) => m.kind === EditorCmd.Handshake)!.body).toEqual([0xe4, 0x11, 0x6f, 0xc3]);
+  expect(Array.from(msgs.find((m) => m.kind === EditorCmd.Handshake)!.body)).toEqual([0xe4, 0x11, 0x6f, 0xc3]);
   const set = msgs.find((m) => m.kind === EditorCmd.SetDspModelParam)!;
   expect(decodeParamChange(set.body)).toEqual({ obj: blockId(0x374), param: paramId(0x350), type: MsgType.Bool, value: false });
 });
@@ -86,7 +86,7 @@ test('splits long messages into fragments with cumulative offsets', () => {
   const r = new Reassembler();
   const out = pkts.flatMap((p) => r.push(parseSysex(p) as never));
   expect(out).toHaveLength(1);
-  expect(out[0].body).toEqual(body);
+  expect(Array.from(out[0].body)).toEqual(body);
 });
 
 test('amp-side reassembly drops an incomplete message instead of merging it', () => {

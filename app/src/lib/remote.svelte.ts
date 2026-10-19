@@ -6,7 +6,7 @@
 // step (amp.shared()).
 import { type SharedState, amp } from './amp.svelte';
 import type { HubPort } from 'spiderv-protocol/hub';
-import { type AppMessage, RemoteTransport, relayUrl } from './protocol/remote';
+import { type AppMessage, RemoteTransport, fromWire, relayUrl, toWire } from './protocol/remote';
 import { keepAwake } from './keepawake.svelte';
 import { catalogStore } from './catalog.svelte';
 
@@ -175,7 +175,7 @@ class Remote {
     if (!hub) return;
     this.ports.get(id)?.close();
     const port = hub.port(`Remote ${id}`);
-    port.onsysex = (data) => this.post({ to: id, t: 'sysex', data });
+    port.onsysex = (data) => this.post({ to: id, t: 'sysex', data: toWire(data) });
     port.ondisconnect = () => this.post({ to: id, t: 'gone', reason: 'The amp was disconnected from the computer.' });
     this.ports.set(id, port);
     this.phones = this.ports.size;
@@ -196,7 +196,7 @@ class Remote {
 
   private fromPhone(id: number, m: AppMessage) {
     if (m.t === 'sysex' && Array.isArray(m.data)) {
-      this.ports.get(id)?.send(m.data as number[]);
+      this.ports.get(id)?.send(fromWire(m.data as number[]));
       return;
     }
     this.fromPeer(m);

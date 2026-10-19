@@ -17,7 +17,7 @@ async function connect() {
 
 test('preset files serialize back byte-for-byte', () => {
   const data = [...Buffer.from(session.editBuffer, 'base64')].slice(4);
-  expect(serializeEntries(parseEntries(data))).toEqual(data);
+  expect(Array.from(serializeEntries(parseEntries(data)))).toEqual(data);
 });
 
 test('renaming changes only the name and keeps names printable and short', () => {

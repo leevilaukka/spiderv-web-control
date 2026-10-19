@@ -5,7 +5,7 @@
 //
 // Importing turns a file into a list of edits for the amp's edit buffer;
 // nothing is written to the amp's preset memory.
-import { type Block, type BlockId, type Bytes, type ModelId, type ParamId, type Preset, type PresetKeyId, MsgType, PresetKey, SymbolTable, VType, parsePreset, typed } from 'spiderv-protocol/codec';
+import { type Block, type BlockId, type ByteLike, type ModelId, type ParamId, type Preset, type PresetKeyId, MsgType, PresetKey, SymbolTable, VType, parsePreset, typed } from 'spiderv-protocol/codec';
 import type { SpiderV } from 'spiderv-protocol/client';
 import { MICS, SYNC_PARAM, catalog, splitCab } from './tone';
 
@@ -60,7 +60,7 @@ export type ImportPlan = {
 
 // ------------------------------------------------------------------ reading
 
-export function readToneFile(bytes: Bytes, st: SymbolTable): ToneFile {
+export function readToneFile(bytes: ByteLike, st: SymbolTable): ToneFile {
   const text = new TextDecoder().decode(new Uint8Array(bytes)).trim();
   if (text.startsWith('{')) {
     let json: ToneFile;
