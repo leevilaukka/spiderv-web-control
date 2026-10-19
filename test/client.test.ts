@@ -4,7 +4,7 @@ import { expect, test } from 'bun:test';
 import session from './fixtures/spiderv20-mkii-session.json';
 import { SpiderV } from 'spiderv-protocol/client';
 import { MockTransport } from '../app/src/lib/protocol/mock';
-import { MsgType, crc32 } from 'spiderv-protocol/codec';
+import { MsgType, blockId, crc32, typed } from 'spiderv-protocol/codec';
 import { buildChain, modelChoices } from '../app/src/lib/tone';
 
 async function connect() {
@@ -47,9 +47,9 @@ test('sets parameters, toggles blocks and changes models', async () => {
   const { amp } = await connect();
   let chain = buildChain(await amp.readPreset(), amp.symbols!);
   const bass = chain.find((s) => s.sym === 'Amp')!.params[0];
-  await amp.setParam(bass.obj, bass.ctrl, { type: bass.type, value: 0.25 });
+  await amp.setParam(bass.obj, bass.ctrl, typed(bass.type, 0.25));
   const reverb = chain.find((s) => s.sym === 'FX4')!;
-  await amp.setParam(reverb.enable!.obj, reverb.enable!.ctrl, { type: MsgType.Bool, value: 0 });
+  await amp.setParam(reverb.enable!.obj, reverb.enable!.ctrl, { type: MsgType.Bool, value: false });
 
   const hall = modelChoices('reverb', amp.symbols!).flatMap((c) => c.models).find((m) => m.sym === 'MediumHall')!;
   await amp.loadModel(reverb.id, hall.id);
@@ -69,7 +69,7 @@ test('loads presets and reports knob turns on the amp', async () => {
   expect((await amp.readPreset()).name).toBe(session.names[5]);
   const changes: unknown[] = [];
   amp.on('param', (c) => changes.push(c));
-  mock.turnKnob(0x2a, amp.symbols!.id('Drive')!, 0.9);
+  mock.turnKnob(blockId(0x2a), amp.symbols!.param('Drive')!, 0.9);
   await new Promise((r) => setTimeout(r, 10));
-  expect(changes).toEqual([{ obj: 0x2a, param: amp.symbols!.id('Drive'), type: MsgType.Float, value: expect.closeTo(0.9) }]);
+  expect(changes).toEqual([{ obj: 0x2a, param: amp.symbols!.param('Drive'), type: MsgType.Float, value: expect.closeTo(0.9) }]);
 });

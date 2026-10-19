@@ -1,8 +1,9 @@
 // Session client: handshake, request/reply on the two channels, events.
 import {
-  type Bytes, type Identity, type Message, type ParamChange, type Preset, type TypedValue,
+  type BlockId, type Bytes, type Identity, type ModelId, type ParamId, type PresetKeyId,
+  type Message, type ParamChange, type Preset, type TypedValue,
   Channel, DEFAULT_DEVICE, EditorCmd, IDENTITY_REQUEST, Kind, LibrarianCmd, MsgType, Reassembler, SymbolTable, SysParam,
-  crc32, decodeParamChange, decodePresetInfo, decodeTyped, encodeMessage, encodeSysex, encodeTyped, parseEntries, setPresetMeta, type PresetMeta,
+  crc32, decodeParamChange, numeric, decodePresetInfo, decodeTyped, encodeMessage, encodeSysex, encodeTyped, parseEntries, setPresetMeta, type PresetMeta,
   i32, le32, leF32, parsePreset, parseSysex, toHex, u32,
 } from './codec';
 
@@ -236,7 +237,7 @@ export class SpiderV {
 
   async currentPresetIndex(): Promise<number> {
     const r = await this.checked(Channel.Editor, EditorCmd.GetPersistentSysParam, le32(SysParam.CurrentPreset), { text: 'get current preset' });
-    return decodeTyped(r.body, 4).value;
+    return numeric(decodeTyped(r.body, 4));
   }
 
   async isDirty(): Promise<boolean> {
@@ -246,18 +247,18 @@ export class SpiderV {
 
   // ------------------------------------------------------------ editing
 
-  async getParam(obj: number, param: number): Promise<TypedValue> {
+  async getParam(obj: BlockId, param: ParamId): Promise<TypedValue> {
     const r = await this.checked(Channel.Editor, EditorCmd.GetDspModelParam, [...le32(obj), ...le32(param)],
       { text: `get ${this.name(obj)}.${this.name(param)}` });
     return decodeTyped(r.body, 4);
   }
 
-  async setParam(obj: number, param: number, v: TypedValue) {
+  async setParam(obj: BlockId, param: ParamId, v: TypedValue) {
     await this.checked(Channel.Editor, EditorCmd.SetDspModelParam, [...le32(obj), ...le32(param), ...encodeTyped(v)],
       { text: `set ${this.name(obj)}.${this.name(param)} = ${fmt(v.value)}${v.type === MsgType.Float ? '' : ` (${MsgType[v.type]})`}` });
   }
 
-  async loadModel(slot: number, model: number) {
+  async loadModel(slot: BlockId, model: ModelId) {
     await this.checked(Channel.Editor, EditorCmd.LoadDspModel, [...le32(slot), ...le32(model)],
       { text: `load model ${this.name(model)} into ${this.name(slot)}` });
   }
@@ -267,16 +268,16 @@ export class SpiderV {
   }
 
   // Edit-buffer preset settings outside the tone blocks (PresetKey).
-  async getPresetKey(key: number): Promise<TypedValue> {
+  async getPresetKey(key: PresetKeyId): Promise<TypedValue> {
     const r = await this.checked(Channel.Editor, EditorCmd.GetPresetPSKeyParam, le32(key), { text: `get preset key ${key}` });
     return decodeTyped(r.body, 4);
   }
 
-  async setPresetKey(key: number, v: TypedValue) {
+  async setPresetKey(key: PresetKeyId, v: TypedValue) {
     await this.checked(Channel.Editor, EditorCmd.SetPresetPSKeyParam, [...le32(key), ...encodeTyped(v)],
       { text: `set preset key ${key} = ${fmt(v.value)}${v.type === MsgType.Float ? '' : ` (${MsgType[v.type]})`}` });
   }
 }
 
-const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(4));
+const fmt = (v: number | boolean) => (typeof v === 'boolean' || Number.isInteger(v) ? String(v) : v.toFixed(4));
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

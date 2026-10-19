@@ -1,6 +1,6 @@
 // Turns a parsed preset + the amp's symbol table + the model catalog into an
 // editable view of the signal chain.
-import { type Block, type Preset, MsgType, SymbolTable, VType } from 'spiderv-protocol/codec';
+import { type Block, type BlockId, type ModelId, type ParamId, type Preset, type StateId, MsgType, SymbolTable, VType, stateId } from 'spiderv-protocol/codec';
 
 // The model catalog: display names, parameter names and ranges, and which
 // models each slot takes (types and loading: spiderv-protocol/catalog). It
@@ -22,9 +22,9 @@ export type Control = {
   key: string;
   sym: string; // control symbol, stable across presets (e.g. "Drive", "ChannelVolume")
   label: string;
-  obj: number;
-  ctrl: number;
-  state: number;
+  obj: BlockId;
+  ctrl: ParamId;
+  state: StateId;
   type: MsgType;
   value: number;
   min: number;
@@ -36,8 +36,8 @@ export type Control = {
 export type Slot = {
   sym: string;
   label: string;
-  id: number;
-  model: number;
+  id: BlockId;
+  model: ModelId;
   modelSym: string;
   modelName: string;
   shortName: string;
@@ -133,7 +133,7 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
   const rootValues = new Map(tone.params.map((p) => [p.key, p]));
 
   const rootControl = (ctrlName: string, label: string, key: string): Control | undefined => {
-    const ctrl = st.id(ctrlName), state = st.id(ctrlName + 'State');
+    const ctrl = st.param(ctrlName), state = st.state(ctrlName + 'State');
     const e = state !== undefined ? rootValues.get(state) : undefined;
     if (ctrl === undefined || state === undefined || !e) return undefined;
     const type = msgType(e.type);
@@ -156,7 +156,7 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
     // Catalog order and names first, then anything else the dump contains.
     for (const cp of cat?.params ?? []) {
       if (cp.sym.startsWith('@')) continue;
-      const ctrl = st.id(cp.sym), state = st.id(cp.sym + 'State');
+      const ctrl = st.param(cp.sym), state = st.state(cp.sym + 'State');
       const e = state !== undefined ? values.get(state) : undefined;
       if (ctrl === undefined || state === undefined || !e) continue;
       used.add(state);
@@ -167,11 +167,11 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
       });
     }
     for (const e of blk.params) {
-      const ctrl = st.controlOf(e.key);
+      const ctrl = st.controlOf(stateId(e.key));
       if (used.has(e.key) || ctrl === undefined) continue;
       const float = e.type === VType.Float;
       params.push({
-        key: `${blk.id}:${ctrl}`, sym: st.name(ctrl) ?? '', label: humanize(st.name(e.key) ?? ''), obj: blk.id, ctrl, state: e.key,
+        key: `${blk.id}:${ctrl}`, sym: st.name(ctrl) ?? '', label: humanize(st.name(e.key) ?? ''), obj: blk.id, ctrl, state: stateId(e.key),
         type: msgType(e.type), value: e.value as number,
         min: float ? Math.min(0, e.value as number) : 0, max: float ? Math.max(1, e.value as number) : e.type === VType.Bool ? 1 : 16,
       });
@@ -186,10 +186,10 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
     if (def.sym === 'StudioCab') {
       mic = splitCab(modelSym).mic;
       const air = blocks.get('Air');
-      const level = st.id('Level'), levelState = st.id('LevelState');
+      const level = st.param('Level'), levelState = st.state('LevelState');
       const e = air?.params.find((p) => p.key === levelState);
       if (air && level !== undefined && e) {
-        extras.push({ key: `${air.id}:${level}`, sym: 'Level', label: 'Early reflections', obj: air.id, ctrl: level, state: e.key, type: MsgType.Float, value: e.value as number, min: 0, max: 1 });
+        extras.push({ key: `${air.id}:${level}`, sym: 'Level', label: 'Early reflections', obj: air.id, ctrl: level, state: stateId(e.key), type: MsgType.Float, value: e.value as number, min: 0, max: 1 });
       }
     }
 
@@ -215,14 +215,14 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
 
 // Model choices for a slot, restricted to models this firmware knows. Empty
 // without a catalog.
-export function modelChoices(list: ModelList, st: SymbolTable): { category: string; models: { sym: string; id: number; name: string }[] }[] {
+export function modelChoices(list: ModelList, st: SymbolTable): { category: string; models: { sym: string; id: ModelId; name: string }[] }[] {
   return catalog.lists[list].map(({ category, models }) => ({
     category,
     models: models
-      .map((sym) => {
-        const id = list === 'cab' ? (sym === '@NoCabinet' ? st.id('NoCabinet') : st.id(sym + MICS[0].suffix)) : st.id(sym);
-        return { sym, id: id ?? -1, name: list === 'cab' && sym === '@NoCabinet' ? 'No cabinet' : (catalog.models[sym]?.name ?? humanize(sym)) };
-      })
-      .filter((m) => m.id >= 0),
+      .flatMap((sym) => {
+        const id = list === 'cab' ? (sym === '@NoCabinet' ? st.model('NoCabinet') : st.model(sym + MICS[0].suffix)) : st.model(sym);
+        if (id === undefined) return [];
+        return [{ sym, id, name: list === 'cab' && sym === '@NoCabinet' ? 'No cabinet' : (catalog.models[sym]?.name ?? humanize(sym)) }];
+      }),
   }));
 }

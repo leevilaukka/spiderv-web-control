@@ -4,7 +4,7 @@ import session from './fixtures/spiderv20-mkii-session.json';
 import { SpiderV } from 'spiderv-protocol/client';
 import { Hub } from 'spiderv-protocol/hub';
 import { MockTransport } from '../app/src/lib/protocol/mock';
-import { type ParamChange, Channel, EditorCmd, MsgType, crc32 } from 'spiderv-protocol/codec';
+import { type ParamChange, Channel, EditorCmd, MsgType, crc32, typed } from 'spiderv-protocol/codec';
 import { buildChain } from '../app/src/lib/tone';
 
 async function setup() {
@@ -48,7 +48,7 @@ test('tells the other clients about parameter changes', async () => {
   phone.on('param', (c) => echoed.push(c));
 
   const bass = buildChain(await phone.readPreset(), phone.symbols!).find((s) => s.sym === 'Amp')!.params[0];
-  await phone.setParam(bass.obj, bass.ctrl, { type: MsgType.Float, value: 0.3 });
+  await phone.setParam(bass.obj, bass.ctrl, typed(MsgType.Float, 0.3));
   await Bun.sleep(5);
   expect(seen).toHaveLength(1);
   expect(seen[0].obj).toBe(bass.obj);

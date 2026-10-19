@@ -36,7 +36,7 @@ test('note values follow Line 6: delays count up, modulations down', () => {
 test('the simulated amp keeps the tempo and sync settings', async () => {
   const { SpiderV } = await import('spiderv-protocol/client');
   const { MockTransport } = await import('../app/src/lib/protocol/mock');
-  const { PresetKey, MsgType } = await import('spiderv-protocol/codec');
+  const { PresetKey, MsgType, typed } = await import('spiderv-protocol/codec');
   const { buildChain } = await import('../app/src/lib/tone');
   const session = (await import('./fixtures/spiderv20-mkii-session.json')).default;
   const mock = new MockTransport(session);
@@ -46,6 +46,6 @@ test('the simulated amp keeps the tempo and sync settings', async () => {
   await amp.setTempo(132.5);
   expect((await amp.readPreset()).header[PresetKey.Tempo]).toBe(132.5);
   const fx3 = buildChain(await amp.readPreset(), amp.symbols!).find((s) => s.sym === 'FX3')!;
-  await amp.setParam(fx3.sync!.c.obj, fx3.sync!.c.ctrl, { type: MsgType.Int, value: 0 });
+  await amp.setParam(fx3.sync!.c.obj, fx3.sync!.c.ctrl, typed(MsgType.Int, 0));
   expect(buildChain(await amp.readPreset(), amp.symbols!).find((s) => s.sym === 'FX3')!.sync!.c.value).toBe(0);
 });

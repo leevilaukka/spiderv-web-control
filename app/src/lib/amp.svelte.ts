@@ -1,6 +1,6 @@
 // Application state: one connected amp, its presets and the current tone.
 import { SpiderV, type LogEntry, type Transport } from 'spiderv-protocol/client';
-import { type Bytes, type ParamChange, MsgType, PresetKey, i32, le32 } from 'spiderv-protocol/codec';
+import { type Bytes, type ModelId, type ParamChange, MsgType, PresetKey, i32, le32, numeric, typed } from 'spiderv-protocol/codec';
 import { WebMidiTransport } from 'spiderv-protocol/webmidi';
 import { Hub } from 'spiderv-protocol/hub';
 import { RemoteTransport } from './protocol/remote';
@@ -279,7 +279,7 @@ export class Amp {
       while (this.outbox.size && this.client) {
         const [key, { c, value }] = this.outbox.entries().next().value!;
         this.outbox.delete(key);
-        await this.client.setParam(c.obj, c.ctrl, { type: c.type, value }).catch((e) => this.report(e));
+        await this.client.setParam(c.obj, c.ctrl, typed(c.type, value)).catch((e) => this.report(e));
       }
     } finally {
       this.pumping = false;
@@ -290,7 +290,7 @@ export class Amp {
     if (slot.enable) this.set(slot.enable, slot.enable.value ? 0 : 1);
   }
 
-  async changeModel(slot: Slot, model: number) {
+  async changeModel(slot: Slot, model: ModelId) {
     if (!this.client || model === slot.model) return;
     try {
       await this.client.loadModel(slot.id, model);
@@ -303,7 +303,7 @@ export class Amp {
   async changeCab(slot: Slot, cab: string, mic: number) {
     const st = this.client?.symbols;
     if (!st) return;
-    const id = cab === '@NoCabinet' ? st.id('NoCabinet') : st.id(cab + MICS[Math.max(0, mic)].suffix);
+    const id = cab === '@NoCabinet' ? st.model('NoCabinet') : st.model(cab + MICS[Math.max(0, mic)].suffix);
     if (id !== undefined) await this.changeModel(slot, id);
   }
 
@@ -368,7 +368,7 @@ export class Amp {
     this.speakerFullRange = fullRange;
     this.dirty = true;
     try {
-      await this.client.setPresetKey(PresetKey.SpeakerMode, { type: MsgType.Bool, value: fullRange ? 1 : 0 });
+      await this.client.setPresetKey(PresetKey.SpeakerMode, typed(MsgType.Bool, fullRange ? 1 : 0));
     } catch (e) {
       this.speakerFullRange = before;
       this.report(e);
@@ -391,7 +391,8 @@ export class Amp {
     for (const slot of this.chain) {
       for (const c of [slot.enable, ...slot.params, ...slot.extras]) {
         if (c && c.obj === ch.obj && c.ctrl === ch.param) {
-          c.value = c.type === MsgType.Float ? ch.value : Math.round(ch.value);
+          const v = numeric(ch);
+          c.value = c.type === MsgType.Float ? v : Math.round(v);
           this.dirty = true;
           return;
         }

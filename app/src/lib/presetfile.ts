@@ -5,7 +5,7 @@
 //
 // Importing turns a file into a list of edits for the amp's edit buffer;
 // nothing is written to the amp's preset memory.
-import { type Block, type Bytes, type Preset, MsgType, PresetKey, SymbolTable, VType, parsePreset } from 'spiderv-protocol/codec';
+import { type Block, type BlockId, type Bytes, type ModelId, type ParamId, type Preset, type PresetKeyId, MsgType, PresetKey, SymbolTable, VType, parsePreset, typed } from 'spiderv-protocol/codec';
 import type { SpiderV } from 'spiderv-protocol/client';
 import { MICS, SYNC_PARAM, catalog, splitCab } from './tone';
 
@@ -43,10 +43,10 @@ const GROUPS: Record<string, { block: string; prefix: string; postPrefix?: strin
 const ROOT = 'GuitarProc';
 
 export type ImportOp =
-  | { kind: 'model'; obj: number; model: number; label: string }
-  | { kind: 'param'; obj: number; ctrl: number; type: MsgType; value: number; label: string }
+  | { kind: 'model'; obj: BlockId; model: ModelId; label: string }
+  | { kind: 'param'; obj: BlockId; ctrl: ParamId; type: MsgType; value: number; label: string }
   | { kind: 'tempo'; bpm: number; label: string }
-  | { kind: 'presetKey'; key: number; type: MsgType; value: number; label: string };
+  | { kind: 'presetKey'; key: PresetKeyId; type: MsgType; value: number; label: string };
 
 export type ImportPlan = {
   name: string;
@@ -95,7 +95,7 @@ export function planImport(file: ToneFile, st: SymbolTable, current?: Preset): I
   const ops: ImportOp[] = [];
   const skipped: string[] = [];
   const warnings: string[] = [];
-  const root = st.id(ROOT);
+  const root = st.block(ROOT);
   const tone = file.data.tone;
 
   const family = (file.data.device ?? 0) >> 16;
@@ -110,7 +110,7 @@ export function planImport(file: ToneFile, st: SymbolTable, current?: Preset): I
   const kept = new Set<number>(); // blocks whose model stays, so their stored types apply
 
   const rootParam = (name: string, value: number, type: MsgType, label: string) => {
-    const ctrl = st.id(name);
+    const ctrl = st.param(name);
     if (ctrl === undefined) { skipped.push(label); return; }
     ops.push({ kind: 'param', obj: root, ctrl, type, value, label });
   };
@@ -119,7 +119,7 @@ export function planImport(file: ToneFile, st: SymbolTable, current?: Preset): I
   const models: Record<string, string> = {};
   for (const [group, def] of Object.entries(GROUPS)) {
     const g = tone[group];
-    const obj = st.id(def.block);
+    const obj = st.block(def.block);
     if (!g || obj === undefined) continue;
     let model = String(g['@model'] ?? '');
     if (!model) continue;
@@ -131,7 +131,7 @@ export function planImport(file: ToneFile, st: SymbolTable, current?: Preset): I
         modelSym = splitCab(model).mic >= 0 ? model : model + mic.suffix;
       }
     }
-    const id = st.id(modelSym);
+    const id = st.model(modelSym);
     if (id === undefined) { warnings.push(`${group}: this amp has no model "${model}"; kept the current one.`); continue; }
     models[group] = model;
     if (currentModel.get(obj) === id) { kept.add(obj); continue; }
@@ -140,7 +140,7 @@ export function planImport(file: ToneFile, st: SymbolTable, current?: Preset): I
 
   for (const [group, def] of Object.entries(GROUPS)) {
     const g = tone[group];
-    const obj = st.id(def.block);
+    const obj = st.block(def.block);
     if (!g || obj === undefined) continue;
     const model = models[group];
     // Tempo sync off is SyncSelect 0 on the amp; the file keeps the note.
@@ -162,8 +162,8 @@ export function planImport(file: ToneFile, st: SymbolTable, current?: Preset): I
       if (key.startsWith('@') || Number.isNaN(value)) { skipped.push(label); continue; }
       if (!model) { skipped.push(label); continue; }
       // Cab "Level" (early reflections) lives on the hidden Air block.
-      const target = group === 'cab' && key === 'Level' ? st.id('Air') : obj;
-      const ctrl = st.id(key);
+      const target = group === 'cab' && key === 'Level' ? st.block('Air') : obj;
+      const ctrl = st.param(key);
       if (ctrl === undefined || target === undefined) { skipped.push(label); continue; }
       const stored = kept.has(obj)
         ? current?.tone?.children.find((b) => b.id === obj)?.params.find((p) => p.key === st.id(key + 'State'))?.type
@@ -200,8 +200,8 @@ export async function applyImport(amp: SpiderV, plan: ImportPlan, progress?: (do
   for (const [i, op] of plan.ops.entries()) {
     try {
       if (op.kind === 'model') await amp.loadModel(op.obj, op.model);
-      else if (op.kind === 'param') await amp.setParam(op.obj, op.ctrl, { type: op.type, value: op.value });
-      else if (op.kind === 'presetKey') await amp.setPresetKey(op.key, { type: op.type, value: op.value });
+      else if (op.kind === 'param') await amp.setParam(op.obj, op.ctrl, typed(op.type, op.value));
+      else if (op.kind === 'presetKey') await amp.setPresetKey(op.key, typed(op.type, op.value));
       else await amp.setTempo(op.bpm);
     } catch {
       failed.push(op.label);

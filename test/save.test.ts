@@ -3,7 +3,7 @@ import { expect, test } from 'bun:test';
 import session from './fixtures/spiderv20-mkii-session.json';
 import { SpiderV } from 'spiderv-protocol/client';
 import { MockTransport } from '../app/src/lib/protocol/mock';
-import { MsgType, PRESET_NAME_MAX, PresetKey, parseEntries, renamePresetData, serializeEntries } from 'spiderv-protocol/codec';
+import { MsgType, PRESET_NAME_MAX, PresetKey, parseEntries, renamePresetData, serializeEntries, typed } from 'spiderv-protocol/codec';
 import { applyImport, planImport, readToneFile } from '../app/src/lib/presetfile';
 import { readFileSync } from 'node:fs';
 
@@ -31,8 +31,8 @@ test('renaming changes only the name and keeps names printable and short', () =>
 
 test('saves the edit buffer to a slot under a new name, and undo restores it', async () => {
   const amp = await connect();
-  const bass = { obj: amp.symbols!.id('Amp')!, ctrl: amp.symbols!.id('Bass')! };
-  await amp.setParam(bass.obj, bass.ctrl, { type: MsgType.Float, value: 0.123 });
+  const bass = { obj: amp.symbols!.block('Amp')!, ctrl: amp.symbols!.param('Bass')! };
+  await amp.setParam(bass.obj, bass.ctrl, typed(MsgType.Float, 0.123));
 
   const before = await amp.readPresetData(7);
   const previous = await amp.savePreset(7, 'My Tone');
@@ -72,6 +72,6 @@ test('saves an imported tone file under its own name and CustomTone id', async (
   expect(saved.header[PresetKey.ToneIdLow]).toBe(1000042);
   expect(saved.header[PresetKey.ToneIdHigh]).toBe(0);
   expect(saved.header[PresetKey.Label]).toBe('Clean'); // the file has no label, so it is kept
-  const ampBlock = saved.tone!.children.find((b) => b.id === amp.symbols!.id('Amp'))!;
+  const ampBlock = saved.tone!.children.find((b) => b.id === amp.symbols!.block('Amp'))!;
   expect(amp.symbols!.name(ampBlock.model)).toBe('BritPlexiLead100');
 });

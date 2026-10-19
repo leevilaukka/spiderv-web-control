@@ -70,7 +70,7 @@ test('export then import reproduces the tone', async () => {
 test('carries the speaker mode (preset key 74) both ways', async () => {
   const amp = await connect();
   // The recorded preset is in Classic; Line 6's file asks for Classic too.
-  expect((await amp.getPresetKey(PresetKey.SpeakerMode)).value).toBe(0);
+  expect((await amp.getPresetKey(PresetKey.SpeakerMode)).value).toBe(false);
   expect(toToneFile(await amp.readPreset(), amp.symbols!).data.tone.global['@speakermode']).toBe(0);
   const plan = planImport(readToneFile(bytesOf(line6Tone), amp.symbols!), amp.symbols!);
   expect(plan.ops).toContainEqual({ kind: 'presetKey', key: PresetKey.SpeakerMode, type: MsgType.Bool, value: 0, label: 'global.@speakermode' });

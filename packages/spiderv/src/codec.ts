@@ -4,6 +4,19 @@
 
 export type Bytes = number[];
 
+// Ids in the amp's symbol table. Each kind has its own type, so a model id can't be passed where a
+// parameter id belongs. Get them from the SymbolTable (block(), model(), param(), state()), from a
+// parsed preset or from the amp's own events; blockId() and friends tag a number you already know.
+export type SymbolId = number & { readonly __symbol: true };
+export type BlockId = SymbolId & { readonly __block: true };   // a slot or effect in the signal chain: "Amp", "Reverb", ...
+export type ModelId = SymbolId & { readonly __model: true };   // what a block currently is: "Line6Vetta", ...
+export type ParamId = SymbolId & { readonly __param: true };   // a control on a block: "Drive", ...
+export type StateId = SymbolId & { readonly __state: true };   // the key a control is stored under in a preset: "DriveState"
+export const blockId = (n: number) => n as BlockId;
+export const modelId = (n: number) => n as ModelId;
+export const paramId = (n: number) => n as ParamId;
+export const stateId = (n: number) => n as StateId;
+
 export const LINE6_ID = [0x00, 0x01, 0x0c];
 export const MSG_TYPE = 0x4d; // 'M': the channelled message stream
 export const IDENTITY_REQUEST: Bytes = [0xf0, 0x7e, 0x7f, 0x06, 0x01, 0xf7];
@@ -248,21 +261,32 @@ export class Reassembler {
 
 export const encodeMessage = (cmd: number, body: Bytes = []): Bytes => [...le32(cmd), ...le32(body.length), ...body];
 
-export type TypedValue = { type: MsgType; value: number };
+// A value as the amp sends and takes it: floats and ints are numbers, bools are booleans.
+export type TypedValue =
+  | { type: MsgType.Float | MsgType.Int; value: number }
+  | { type: MsgType.Bool; value: boolean };
 
-export function encodeTyped({ type, value }: TypedValue): Bytes {
-  return [...le32(type), ...(type === MsgType.Float ? leF32(value) : le32(value | 0))];
+// Builds a typed value from a plain number (non-zero is true for bools).
+export const typed = (type: MsgType, n: number): TypedValue =>
+  type === MsgType.Bool ? { type, value: n !== 0 } : { type: type as MsgType.Float | MsgType.Int, value: n };
+
+// The value as a number (bools are 0 or 1).
+export const numeric = (v: TypedValue): number => (typeof v.value === 'boolean' ? Number(v.value) : v.value);
+
+export function encodeTyped(v: TypedValue): Bytes {
+  return [...le32(v.type), ...(v.type === MsgType.Float ? leF32(v.value) : le32(numeric(v) | 0))];
 }
 
 export function decodeTyped(b: Bytes, o: number): TypedValue {
   const type = u32(b, o) as MsgType;
-  return { type, value: type === MsgType.Float ? f32(b, o + 4) : i32(b, o + 4) };
+  if (type === MsgType.Float) return { type, value: f32(b, o + 4) };
+  return typed(type, i32(b, o + 4));
 }
 
-export type ParamChange = { obj: number; param: number } & TypedValue;
+export type ParamChange = { obj: BlockId; param: ParamId } & TypedValue;
 
 export function decodeParamChange(body: Bytes): ParamChange {
-  return { obj: u32(body, 0), param: u32(body, 4), ...decodeTyped(body, 8) };
+  return { obj: blockId(u32(body, 0)), param: paramId(u32(body, 4)), ...decodeTyped(body, 8) };
 }
 
 // GetPresetInfo reply body: 20 bytes of metadata, then a length-prefixed name.
@@ -273,7 +297,7 @@ export function decodePresetInfo(body: Bytes): { meta: Bytes; name: string } {
 // ---------------------------------------------------------------- presets
 
 export type Entry = { key: number; type: VType; value: number | string | null };
-export type Block = { id: number; model: number; params: Entry[]; children: Block[] };
+export type Block = { id: BlockId; model: ModelId; params: Entry[]; children: Block[] };
 export type Section = { version: number; magic: string; root: Block | null; params: Entry[] };
 export type Preset = { name: string; header: Record<number, Entry['value']>; sections: Section[]; tone: Block | null };
 
@@ -332,6 +356,8 @@ export const PresetKey = {
   Label: 75,
 } as const;
 
+export type PresetKeyId = (typeof PresetKey)[keyof typeof PresetKey];
+
 export type PresetMeta = { name?: string; label?: string; tnid?: number };
 
 const cleanText = (s: string) => s.replace(/[^\x20-\x7e]/g, '?').slice(0, PRESET_NAME_MAX);
@@ -384,13 +410,13 @@ export function parsePreset(body: Bytes): Preset {
         break;
       case MetaKey.SectionEnd: stack.length = 0; break;
       case MetaKey.Block: {
-        const blk: Block = { id: e.value as number, model: 0, params: [], children: [] };
+        const blk: Block = { id: blockId(e.value as number), model: modelId(0), params: [], children: [] };
         if (top) top.children.push(blk);
         else section!.root = blk;
         stack.push(blk);
         break;
       }
-      case MetaKey.Model: top.model = e.value as number; break;
+      case MetaKey.Model: top.model = modelId(e.value as number); break;
       case MetaKey.ParamCount: break;
       case MetaKey.BlockEnd: stack.pop(); break;
       default:
@@ -426,16 +452,20 @@ export class SymbolTable {
   }
 
   name(id: number): string | undefined { return this.names[id]; }
-  id(name: string): number | undefined { return this.ids.get(name); }
+  id(name: string): SymbolId | undefined { return this.ids.get(name) as SymbolId | undefined; }
+  block(name: string) { return this.id(name) as BlockId | undefined; }
+  model(name: string) { return this.id(name) as ModelId | undefined; }
+  param(name: string) { return this.id(name) as ParamId | undefined; }
+  state(name: string) { return this.id(name) as StateId | undefined; }
 
   // Stored params are named "<X>State"; get/set and notifications use "<X>".
-  controlOf(stateId: number): number | undefined {
+  controlOf(stateId: StateId): ParamId | undefined {
     const n = this.names[stateId];
-    return n?.endsWith('State') ? this.ids.get(n.slice(0, -5)) : undefined;
+    return n?.endsWith('State') ? this.param(n.slice(0, -5)) : undefined;
   }
 
-  stateOf(controlId: number): number | undefined {
+  stateOf(controlId: ParamId): StateId | undefined {
     const n = this.names[controlId];
-    return n === undefined ? undefined : this.ids.get(n + 'State');
+    return n === undefined ? undefined : this.state(n + 'State');
   }
 }

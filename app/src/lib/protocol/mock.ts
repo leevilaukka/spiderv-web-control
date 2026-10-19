@@ -2,9 +2,9 @@
 // as the real amp, starting from a session recorded with
 // `bun tools/spiderv-cli.ts record`.
 import {
-  type Bytes, type Entry, Channel, EditorCmd, Kind, LibrarianCmd, MetaKey, MsgType, PresetKey, Reassembler, SymbolTable, SysParam, VType,
-  crc32, decodeTyped, encodeMessage, encodeSysex, encodeTyped, i32, le32, parseEntries, parseSysex, renamePresetData,
-  serializeEntries, u32,
+  type BlockId, type Bytes, type Entry, type ParamId, Channel, EditorCmd, Kind, LibrarianCmd, MetaKey, MsgType, PresetKey, Reassembler, SymbolTable, SysParam, VType,
+  crc32, decodeTyped, encodeMessage, encodeSysex, encodeTyped, i32, le32, numeric, parseEntries, parseSysex, renamePresetData,
+  paramId, serializeEntries, typed, u32,
 } from 'spiderv-protocol/codec';
 import type { Transport } from 'spiderv-protocol/client';
 import { catalog } from '../tone';
@@ -76,9 +76,9 @@ export class MockTransport implements Transport {
   }
 
   // Simulates turning a knob on the amp itself.
-  turnKnob(obj: number, ctrl: number, value: number) {
+  turnKnob(obj: BlockId, ctrl: ParamId, value: number) {
     this.store(obj, ctrl, value);
-    this.reply(Channel.Editor, Kind.ParamChanged, [...le32(obj), ...le32(ctrl), ...encodeTyped({ type: MsgType.Float, value })]);
+    this.reply(Channel.Editor, Kind.ParamChanged, [...le32(obj), ...le32(ctrl), ...encodeTyped(typed(MsgType.Float, value))]);
   }
 
   private ok(ch: Channel, body: Bytes = le32(0)) { this.reply(ch, Kind.Reply, body); }
@@ -98,16 +98,16 @@ export class MockTransport implements Transport {
     switch (cmd) {
       case EditorCmd.GetDirtyState: return this.ok(ch, [this.dirty ? 1 : 0]);
       case EditorCmd.GetPersistentSysParam:
-        if (u32(body, 0) === SysParam.CurrentPreset) return this.ok(ch, [...le32(0), ...encodeTyped({ type: MsgType.Int, value: this.current })]);
+        if (u32(body, 0) === SysParam.CurrentPreset) return this.ok(ch, [...le32(0), ...encodeTyped(typed(MsgType.Int, this.current))]);
         return this.err(ch, -1);
       case EditorCmd.GetDspModelParam: {
-        const e = this.find(u32(body, 0), u32(body, 4));
+        const e = this.find(u32(body, 0), paramId(u32(body, 4)));
         if (!e) return this.err(ch, -1);
         const type = e.type === VType.Float ? MsgType.Float : e.type === VType.Bool ? MsgType.Bool : MsgType.Int;
-        return this.ok(ch, [...le32(0), ...encodeTyped({ type, value: e.value as number })]);
+        return this.ok(ch, [...le32(0), ...encodeTyped(typed(type, e.value as number))]);
       }
       case EditorCmd.SetDspModelParam: {
-        const ok = this.store(u32(body, 0), u32(body, 4), decodeTyped(body, 8).value);
+        const ok = this.store(u32(body, 0), paramId(u32(body, 4)), numeric(decodeTyped(body, 8)));
         return ok ? this.ok(ch) : this.err(ch, -1);
       }
       case EditorCmd.QueryCurrentDspModel: {
@@ -117,7 +117,7 @@ export class MockTransport implements Transport {
       case EditorCmd.LoadDspModel: return this.loadModel(u32(body, 0), u32(body, 4)) ? this.ok(ch) : this.err(ch, -1);
       case EditorCmd.SetGlobalTempo: {
         const e = this.presetKey(PresetKey.Tempo);
-        if (e) e.value = decodeTyped([...le32(MsgType.Float), ...body], 0).value;
+        if (e) e.value = numeric(decodeTyped([...le32(MsgType.Float), ...body], 0));
         this.dirty = true;
         return this.ok(ch);
       }
@@ -125,12 +125,12 @@ export class MockTransport implements Transport {
         const e = this.presetKey(u32(body, 0));
         if (!e) return this.err(ch, -1);
         const type = e.type === VType.Float ? MsgType.Float : e.type === VType.Bool ? MsgType.Bool : MsgType.Int;
-        return this.ok(ch, [...le32(0), ...encodeTyped({ type, value: e.value as number })]);
+        return this.ok(ch, [...le32(0), ...encodeTyped(typed(type, e.value as number))]);
       }
       case EditorCmd.SetPresetPSKeyParam: {
         const e = this.presetKey(u32(body, 0));
         if (!e) return this.err(ch, -1);
-        const v = decodeTyped(body, 4).value;
+        const v = numeric(decodeTyped(body, 4));
         e.value = e.type === VType.Float ? v : Math.round(v);
         this.dirty = true;
         return this.ok(ch);
@@ -193,7 +193,7 @@ export class MockTransport implements Transport {
     return this.entries.findIndex((e) => e.key === MetaKey.Block && e.value === obj);
   }
 
-  private find(obj: number, ctrl: number): Entry | undefined {
+  private find(obj: number, ctrl: ParamId): Entry | undefined {
     const state = this.st.stateOf(ctrl);
     let i = this.blockIndex(obj), depth = 0;
     if (i < 0 || state === undefined) return undefined;
@@ -205,7 +205,7 @@ export class MockTransport implements Transport {
     }
   }
 
-  private store(obj: number, ctrl: number, value: number): boolean {
+  private store(obj: number, ctrl: ParamId, value: number): boolean {
     const e = this.find(obj, ctrl);
     if (!e) return false;
     e.value = e.type === VType.Float ? value : Math.round(value);

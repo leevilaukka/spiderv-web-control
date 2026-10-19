@@ -4,7 +4,7 @@ import { expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import {
   type Message, EditorCmd, Kind, LibrarianCmd, MsgType, Reassembler, crc32, decodeParamChange, decodePresetInfo,
-  encodeMessage, encodeSysex, encodeTyped, le32, pack7, parsePreset, parseSysex, unpack7,
+  encodeMessage, encodeSysex, encodeTyped, blockId, le32, paramId, pack7, parsePreset, parseSysex, unpack7,
 } from 'spiderv-protocol/codec';
 
 const capture = readFileSync(new URL('./fixtures/spiderv30-remote-capture.txt', import.meta.url), 'utf8')
@@ -44,7 +44,7 @@ test('encoder reproduces packets sent by Spider V Remote byte-for-byte', () => {
     [1, 3, encodeMessage(LibrarianCmd.GetPresetInfo, le32(0))],
     [1, 2, encodeMessage(LibrarianCmd.GetPresetFile, le32(-1))],
     [0, 3, encodeMessage(EditorCmd.GetFbvConnectivityStatus)],
-    [0, 16, [...le32(0x374), ...le32(0x350), ...encodeTyped({ type: MsgType.Bool, value: 0 })]],
+    [0, 16, [...le32(0x374), ...le32(0x350), ...encodeTyped({ type: MsgType.Bool, value: false })]],
   ];
   for (const [ch, seq, msg] of cases) expect(sent.has(encodeSysex(MKI, ch, seq, msg)[0].join())).toBe(true);
 });
@@ -59,7 +59,7 @@ test('reassembles host messages split across header and body packets', () => {
   const { msgs } = decodeAll(false);
   expect(msgs.find((m) => m.kind === EditorCmd.Handshake)!.body).toEqual([0xe4, 0x11, 0x6f, 0xc3]);
   const set = msgs.find((m) => m.kind === EditorCmd.SetDspModelParam)!;
-  expect(decodeParamChange(set.body)).toEqual({ obj: 0x374, param: 0x350, type: MsgType.Bool, value: 0 });
+  expect(decodeParamChange(set.body)).toEqual({ obj: blockId(0x374), param: paramId(0x350), type: MsgType.Bool, value: false });
 });
 
 test('decodes preset names, a full preset and live parameter changes', () => {
@@ -72,11 +72,11 @@ test('decodes preset names, a full preset and live parameter changes', () => {
   const preset = parsePreset(msgs.find((m) => m.body.length > 1000)!.body);
   expect(preset.name).toBe('O Breakdown');
   expect(preset.sections.map((s) => s.magic)).toEqual(['PRSP', 'GTRT']);
-  expect(preset.tone!.id).toBe(0x374);
+  expect(preset.tone!.id).toBe(blockId(0x374));
   expect(preset.tone!.children).toHaveLength(12);
 
   const change = decodeParamChange(msgs.find((m) => m.kind === Kind.ParamChanged)!.body);
-  expect(change).toEqual({ obj: 0x374, param: 0x350, type: MsgType.Float, value: 1 });
+  expect(change).toEqual({ obj: blockId(0x374), param: paramId(0x350), type: MsgType.Float, value: 1 });
 });
 
 test('splits long messages into fragments with cumulative offsets', () => {

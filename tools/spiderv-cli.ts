@@ -21,7 +21,7 @@
 //   raw <ch> <cmd> [u32 words...] send a raw command, print the reply
 import fs from 'node:fs';
 import { SpiderV, type Transport } from 'spiderv-protocol/client';
-import { type Block, type Bytes, Channel, MsgType, SymbolTable, VType, i32, le32, toHex } from 'spiderv-protocol/codec';
+import { type Block, type Bytes, Channel, MsgType, SymbolTable, VType, i32, le32, toHex, typed, blockId, modelId, paramId } from 'spiderv-protocol/codec';
 import { applyImport, planImport, readToneFile } from '../app/src/lib/presetfile';
 
 class RawMidiTransport implements Transport {
@@ -108,12 +108,17 @@ amp.on('log', (e) => {
 });
 
 const hex = (v: number) => '0x' + v.toString(16);
-const id = (s: string): number => {
+const num = (s: string): number => {
   if (/^(0x[0-9a-f]+|\d+)$/i.test(s)) return Number(s);
   const v = amp.symbols?.id(s);
   if (v === undefined) throw new Error(`unknown symbol ${s}`);
   return v;
 };
+// The CLI takes raw ids and symbol names; the typed ids are asserted here.
+const id = num;
+const block = (s: string) => blockId(num(s));
+const model = (s: string) => modelId(num(s));
+const param = (s: string) => paramId(num(s));
 
 try {
   await amp.connect();
@@ -140,14 +145,14 @@ try {
       printPreset(p.name, p.header, p.tone, amp.symbols!);
       break;
     }
-    case 'get': console.log(await amp.getParam(id(rest[0]), id(rest[1]))); break;
+    case 'get': console.log(await amp.getParam(block(rest[0]), param(rest[1]))); break;
     case 'set': {
       const type = rest[3] === 'int' ? MsgType.Int : rest[3] === 'bool' ? MsgType.Bool : MsgType.Float;
-      await amp.setParam(id(rest[0]), id(rest[1]), { type, value: Number(rest[2]) });
-      console.log('ok', await amp.getParam(id(rest[0]), id(rest[1])));
+      await amp.setParam(block(rest[0]), param(rest[1]), typed(type, Number(rest[2])));
+      console.log('ok', await amp.getParam(block(rest[0]), param(rest[1])));
       break;
     }
-    case 'model': await amp.loadModel(id(rest[0]), id(rest[1])); console.log('ok'); break;
+    case 'model': await amp.loadModel(block(rest[0]), model(rest[1])); console.log('ok'); break;
     case 'symbols': amp.symbols!.names.forEach((n, i) => console.log(hex(i).padEnd(6), n)); break;
     case 'listen':
       console.log('listening, Ctrl-C to quit');
