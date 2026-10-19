@@ -1,6 +1,6 @@
 {
   "name": "spiderv-protocol",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Client for the Line 6 Spider V amp protocol (SysEx over USB MIDI), reverse-engineered. Not affiliated with Line 6.",
   "type": "module",
   "license": "MIT",
