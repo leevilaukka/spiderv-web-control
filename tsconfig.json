@@ -7,7 +7,11 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "noEmit": true,
-    "types": ["bun"]
+    "types": ["bun"],
+    "paths": {
+      "@anthropic-ai/sdk": ["./app/node_modules/@anthropic-ai/sdk"],
+      "@google/genai": ["./app/node_modules/@google/genai"]
+    }
   },
   "include": ["tools/**/*.ts", "test/**/*.ts"]
 }
