@@ -736,7 +736,7 @@ export class Amp {
   async raw(channel: number, cmd: number, words: number[]) {
     if (!this.client) return;
     try {
-      const r = await this.client.request(channel, cmd, words.flatMap((w) => le32(w)));
+      const r = await this.client.requestRaw(channel, cmd, words.flatMap((w) => le32(w)));
       if (r.body.length >= 4 && i32(r.body, 0) < 0) this.info(`status ${i32(r.body, 0)}`);
     } catch (e) {
       this.report(e);

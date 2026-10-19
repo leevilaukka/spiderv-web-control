@@ -4,7 +4,7 @@ import session from './fixtures/spiderv20-mkii-session.json';
 import { SpiderV } from 'spiderv-protocol/client';
 import { Hub } from 'spiderv-protocol/hub';
 import { MockTransport } from '../app/src/lib/protocol/mock';
-import { type ParamChange, Channel, EditorCmd, MsgType, crc32, typed } from 'spiderv-protocol/codec';
+import { type ParamChange, Channel, EditorCmd, LibrarianCmd, MsgType, crc32, typed } from 'spiderv-protocol/codec';
 import { buildChain } from '../app/src/lib/tone';
 
 async function setup() {
@@ -63,7 +63,7 @@ test('a client that leaves mid-request does not hold up the others', async () =>
   const port = hub.port('Remote');
   const phone = new SpiderV(port);
   await phone.connect();
-  const pending = phone.request(Channel.Librarian, 0x0e, [5, 0, 0, 0], { timeout: 200 }).catch(() => 'gone');
+  const pending = phone.request(Channel.Librarian, LibrarianCmd.GetPresetInfo, [5, 0, 0, 0], { timeout: 200 }).catch(() => 'gone');
   await port.close();
   expect(await pending).toBe('gone');
   expect(await host.presetName(5)).toBe(session.names[5]);

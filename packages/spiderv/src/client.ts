@@ -1,6 +1,6 @@
 // Session client: handshake, request/reply on the two channels, events.
 import {
-  type BlockId, type Bytes, type Identity, type ModelId, type ParamId, type PresetKeyId,
+  type BlockId, type Bytes, type EditorCmdId, type LibrarianCmdId, type Identity, type ModelId, type ParamId, type PresetKeyId,
   type Message, type ParamChange, type Preset, type TypedValue,
   Channel, DEFAULT_DEVICE, EditorCmd, IDENTITY_REQUEST, Kind, LibrarianCmd, MsgType, Reassembler, SymbolTable, SysParam,
   crc32, decodeParamChange, numeric, decodePresetInfo, decodeTyped, encodeMessage, encodeSysex, encodeTyped, parseEntries, setPresetMeta, type PresetMeta,
@@ -14,6 +14,8 @@ export interface Transport {
   send(bytes: Bytes): void;
   close(): Promise<void>;
 }
+
+export type RequestOptions = { timeout?: number; text?: string };
 
 export type LogEntry = { t: number; dir: 'in' | 'out' | 'info'; text: string; raw?: Bytes };
 
@@ -120,8 +122,16 @@ export class SpiderV {
     this.seq[channel] = (this.seq[channel] + 1) & 0x7f;
   }
 
-  // One request per channel is in flight at a time; later calls queue.
-  request(channel: Channel, cmd: number, body: Bytes = [], { timeout = REPLY_TIMEOUT, text = '' } = {}): Promise<Message> {
+  // One request per channel is in flight at a time; later calls queue. The command must belong
+  // to the channel (EditorCmd on Channel.Editor, LibrarianCmd on Channel.Librarian).
+  request(channel: Channel.Editor, cmd: EditorCmdId, body?: Bytes, opts?: RequestOptions): Promise<Message>;
+  request(channel: Channel.Librarian, cmd: LibrarianCmdId, body?: Bytes, opts?: RequestOptions): Promise<Message>;
+  request(channel: Channel, cmd: EditorCmdId | LibrarianCmdId, body: Bytes = [], opts: RequestOptions = {}): Promise<Message> {
+    return this.requestRaw(channel, cmd, body, opts);
+  }
+
+  // The same with any numbers, for commands this library doesn't know yet.
+  requestRaw(channel: number, cmd: number, body: Bytes = [], { timeout = REPLY_TIMEOUT, text = '' }: RequestOptions = {}): Promise<Message> {
     const label = text || `ch${channel} cmd ${hex(cmd)}${body.length ? ' ' + toHex(body) : ''}`;
     const run = () => new Promise<Message>((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -138,8 +148,10 @@ export class SpiderV {
   }
 
   // Requests whose reply starts with a status word; throws if it is negative.
-  private async checked(channel: Channel, cmd: number, body: Bytes = [], opts?: { timeout?: number; text?: string }) {
-    const r = await this.request(channel, cmd, body, opts);
+  private async checked(channel: Channel.Editor, cmd: EditorCmdId, body?: Bytes, opts?: RequestOptions): Promise<Message>;
+  private async checked(channel: Channel.Librarian, cmd: LibrarianCmdId, body?: Bytes, opts?: RequestOptions): Promise<Message>;
+  private async checked(channel: Channel, cmd: EditorCmdId | LibrarianCmdId, body: Bytes = [], opts?: RequestOptions) {
+    const r = await this.requestRaw(channel, cmd, body, opts);
     const status = r.body.length >= 4 ? i32(r.body, 0) : 0;
     if (status < 0) throw new AmpError(`${opts?.text ?? hex(cmd)} failed (status ${status})`, status);
     return r;

@@ -27,9 +27,17 @@ export const DEFAULT_DEVICE: [number, number] = [0x22, 0x00];
 
 export enum Channel { Editor = 0, Librarian = 1 }
 
+// Command ids are numbers that only mean something on their own channel (0x0d is a different
+// command on each), so each channel's commands have a type of their own and the client takes a
+// command only with its channel.
+export type EditorCmdId = number & { readonly __editorCmd: true };
+export type LibrarianCmdId = number & { readonly __librarianCmd: true };
+const editorCmds = <T extends Record<string, number>>(t: T) => t as unknown as { readonly [K in keyof T]: EditorCmdId };
+const librarianCmds = <T extends Record<string, number>>(t: T) => t as unknown as { readonly [K in keyof T]: LibrarianCmdId };
+
 // Command IDs, named after the methods of ToneMatchEdit_Remote /
 // ToneMatchLibrarian_Remote in Line 6's Android app (libParkerRemoteNdk.so).
-export const EditorCmd = {
+export const EditorCmd = editorCmds({
   GetVersion: 0x01,
   GetSymbolTableSize: 0x02,
   GetSymbolTable: 0x03,
@@ -52,9 +60,9 @@ export const EditorCmd = {
   GetPresetPSKeyParam: 0x14,   // body: PresetKey -> status, vtype, value
   GetSystemSetting: 0x15,
   SetSystemSetting: 0x16,
-} as const;
+});
 
-export const LibrarianCmd = {
+export const LibrarianCmd = librarianCmds({
   GetVersion: 0x01,
   GetSymbolTableSize: 0x02,
   GetSymbolTable: 0x03,
@@ -69,7 +77,7 @@ export const LibrarianCmd = {
   SetPresetFile: 0x0c,         // body: index (-1 = edit buffer), u32 length, preset file -> status
   LoadHardwarePreset: 0x0d,    // body: index
   GetPresetInfo: 0x0e,         // body: index -> metadata + name
-} as const;
+});
 
 // Persistent system parameter keys (GetPersistentSysParam).
 export const SysParam = { CurrentPreset: 9 } as const;

@@ -21,7 +21,7 @@
 //   raw <ch> <cmd> [u32 words...] send a raw command, print the reply
 import fs from 'node:fs';
 import { SpiderV, type Transport } from 'spiderv-protocol/client';
-import { type Block, type Bytes, Channel, MsgType, SymbolTable, VType, i32, le32, toHex, typed, blockId, modelId, paramId } from 'spiderv-protocol/codec';
+import { type Block, type Bytes, Channel, MsgType, SymbolTable, VType, i32, le32, toHex, typed, LibrarianCmd, blockId, modelId, paramId } from 'spiderv-protocol/codec';
 import { applyImport, planImport, readToneFile } from '../app/src/lib/presetfile';
 
 class RawMidiTransport implements Transport {
@@ -172,7 +172,7 @@ try {
     case 'backup': {
       const presets = [];
       for (let i = 0; i < amp.presetCount; i++) {
-        const r = await amp.request(Channel.Librarian, 0x0b, le32(i), { timeout: 10000 });
+        const r = await amp.request(Channel.Librarian, LibrarianCmd.GetPresetFile, le32(i), { timeout: 10000 });
         if (i32(r.body, 0) < 0) throw new Error(`reading preset ${i} failed (status ${i32(r.body, 0)})`);
         presets.push({ index: i, name: await amp.presetName(i), data: Buffer.from(r.body.slice(4)).toString('base64') });
       }
@@ -206,7 +206,7 @@ try {
       const names: string[] = [];
       for (let i = 0; i < amp.presetCount; i++) names.push(await amp.presetName(i));
       const current = await amp.currentPresetIndex();
-      const r = await amp.request(Channel.Librarian, 0x0b, le32(-1));
+      const r = await amp.request(Channel.Librarian, LibrarianCmd.GetPresetFile, le32(-1));
       fs.writeFileSync(rest[0], JSON.stringify({
         identity: amp.identity, info: amp.info, version: amp.version, current, names,
         symbolTable: Buffer.from(amp.symbols!.bytes).toString('base64'),
@@ -216,7 +216,7 @@ try {
       break;
     }
     case 'raw': {
-      const r = await amp.request(Number(rest[0]), Number(rest[1]), rest.slice(2).flatMap((w) => le32(Number(w))));
+      const r = await amp.requestRaw(Number(rest[0]), Number(rest[1]), rest.slice(2).flatMap((w) => le32(Number(w))));
       console.log(`reply kind ${r.kind}, ${r.body.length} bytes\n${toHex(r.body)}`);
       break;
     }
