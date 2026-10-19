@@ -1,6 +1,6 @@
 <script lang="ts">
   import { amp } from '../amp.svelte';
-  import { type Control, type Slot, MICS, modelChoices, noteChoices } from '../tone';
+  import { type Control, type Slot, MICS, isTestingCategory, modelChoices, noteChoices } from '../tone';
   import { MsgType } from 'spiderv-protocol/codec';
   import { groupColor } from '../colors';
   import Knob from './Knob.svelte';
@@ -11,7 +11,9 @@
 
   let { slot }: { slot: Slot } = $props();
 
-  const choices = $derived(catalogStore.version >= 0 && slot.list && amp.client?.symbols ? modelChoices(slot.list, amp.client.symbols) : []);
+  const allChoices = $derived(catalogStore.version >= 0 && slot.list && amp.client?.symbols ? modelChoices(slot.list, amp.client.symbols) : []);
+  const testing = $derived(allChoices.filter((g) => isTestingCategory(g.category)));
+  const choices = $derived(catalogStore.showTesting ? allChoices : allChoices.filter((g) => !isTestingCategory(g.category)));
   // Without the model catalog the model lists are unknown.
   const noList = $derived(!!slot.list && !choices.length);
   const cab = $derived(slot.sym === 'StudioCab' ? amp.cabOf(slot) : null);
@@ -82,6 +84,11 @@
       </div>
     {/each}
   </div>
+  {#if testing.length}
+    <button class="testing" onclick={() => catalogStore.setShowTesting(!catalogStore.showTesting)}>
+      {catalogStore.showTesting ? 'Hide' : 'Show'} Line 6's test {testing.length === 1 ? 'list' : 'lists'}: {testing.map((g) => g.category).join(', ')}
+    </button>
+  {/if}
 {/snippet}
 
 <section class="editor" class:off={slot.enable && !on} style:--c={color} aria-labelledby="slot-title">
@@ -367,6 +374,20 @@
   .choice:hover { background: var(--panel-2); }
   .choice:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
   .choice .dot { color: transparent; font-size: 12px; }
+  .testing {
+    align-self: flex-start;
+    margin-top: 8px;
+    padding: 4px 10px;
+    font: inherit;
+    font-size: 12px;
+    color: var(--muted);
+    background: none;
+    border: 0;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .testing:hover { color: var(--text); }
+  .testing:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   .choice.current {
     font-weight: 600;
     background: color-mix(in srgb, var(--c) 16%, transparent);

@@ -213,6 +213,10 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
   return slots;
 }
 
+// Line 6's catalog has test lists, like "PODX3 (testing)" with every amp
+// again, that the model picker hides unless asked.
+export const isTestingCategory = (category: string) => /\(testing\)/i.test(category);
+
 // Model choices for a slot, restricted to models this firmware knows. Empty
 // without a catalog.
 export function modelChoices(list: ModelList, st: SymbolTable): { category: string; models: { sym: string; id: ModelId; name: string }[] }[] {

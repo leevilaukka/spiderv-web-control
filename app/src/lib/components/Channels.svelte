@@ -63,11 +63,11 @@
         </span>
       {/if}
     </button>
-    {#if variant !== 'strip'}<button class="fsw-edit" aria-label="Edit channels" title="Edit channels" onclick={openSetup}>✎</button>{/if}
+    <button class="fsw-edit" aria-label="Edit channels" title="Edit channels" onclick={openSetup}>✎</button>
     {#if variant === 'bar' && controls.settings.channelKey}<kbd class="key" aria-hidden="true">{keyLabel(controls.settings.channelKey)}</kbd>{/if}
   </div>
-{:else if variant !== 'strip'}
-  <button class="add" onclick={openSetup} title="Two setups of the amp or blocks, like a GX-100's two amps">
+{:else}
+  <button class="add {variant}" onclick={openSetup} title="Two setups of the amp or blocks, like a GX-100's two amps">
     <span aria-hidden="true">+</span> Channels A/B
   </button>
 {/if}
@@ -148,7 +148,7 @@
     white-space: nowrap;
   }
   .strip .letter { width: 24px; height: 24px; font-size: 12px; }
-  .strip .ab { gap: 6px; padding: 0 12px; }
+  .strip .ab { gap: 6px; padding: 0 4px 0 12px; }
   .big .letter { width: 32px; height: 32px; font-size: 15px; border-radius: 7px; }
   .big .name { font-size: 17px; font-weight: 700; }
   .key {
@@ -178,7 +178,8 @@
   }
   .add:hover { color: var(--text); border-color: var(--muted); }
   .add:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  :global(.big) > .add { height: auto; min-height: 64px; border-radius: 14px; }
+  .add.strip { order: 1; height: 48px; padding: 0 14px; }
+  .add.big { height: auto; min-height: 64px; border-radius: 14px; }
 
   dialog {
     width: min(440px, calc(100vw - 32px));

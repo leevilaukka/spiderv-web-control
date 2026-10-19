@@ -8,6 +8,7 @@ import { type Catalog, hasCatalog, setCatalog, validCatalog } from './tone';
 import { catalogFromApk } from 'spiderv-protocol/catalog';
 
 const STORAGE_KEY = 'spiderv.catalog';
+const TESTING_KEY = 'spiderv.showTestingModels';
 
 const builtIn = Object.values(import.meta.glob<Catalog>('./catalog.json', { eager: true, import: 'default' }))[0] ?? null;
 
@@ -16,6 +17,10 @@ function stored(): Catalog | null {
     const v = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null');
     return validCatalog(v) ? v : null;
   } catch { return null; }
+}
+
+function readFlag(key: string): boolean {
+  try { return !!localStorage.getItem(key); } catch { return false; }
 }
 
 class CatalogStore {
@@ -28,6 +33,8 @@ class CatalogStore {
   error = $state('');
   // Bumped on every change, for views that list models.
   version = $state(0);
+  // Whether model pickers show Line 6's test lists (isTestingCategory).
+  showTesting = $state(readFlag(TESTING_KEY));
   // This browser's own catalog, to return to after demo or remote use.
   private own: { c: Catalog; origin: 'stored' | 'built-in' } | null = null;
 
@@ -35,6 +42,11 @@ class CatalogStore {
     const c = stored();
     if (c) this.use(c, 'stored');
     else if (builtIn && validCatalog(builtIn)) this.use(builtIn, 'built-in');
+  }
+
+  setShowTesting(show: boolean) {
+    this.showTesting = show;
+    try { localStorage.setItem(TESTING_KEY, show ? '1' : ''); } catch {}
   }
 
   get loaded() { return this.origin !== 'none' && this.origin !== 'demo'; }

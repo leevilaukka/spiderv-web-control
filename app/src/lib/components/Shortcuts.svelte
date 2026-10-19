@@ -82,14 +82,12 @@
         {#if variant === 'bar' && s.key}<kbd class="key" aria-hidden="true">{keyLabel(s.key)}</kbd>{/if}
         {#if variant !== 'strip'}<span class="desc">{summary(s)}</span>{/if}
       </button>
-      {#if variant !== 'strip'}<button class="edit" aria-label="Edit {s.name}" title="Edit" onclick={() => shortcuts.edit(s)}>✎</button>{/if}
+      <button class="edit" aria-label="Edit {s.name}" title="Edit" onclick={() => shortcuts.edit(s)}>✎</button>
     </div>
   {/each}
-  {#if variant !== 'strip'}
-    <button class="add" onclick={() => shortcuts.create()} title="Switch blocks and knobs with one key or footswitch">
-      <span aria-hidden="true">+</span> Shortcut
-    </button>
-  {/if}
+  <button class="add" onclick={() => shortcuts.create()} title="Switch blocks and knobs with one key or footswitch">
+    <span aria-hidden="true">+</span> Shortcut
+  </button>
 </section>
 
 <style>
@@ -247,13 +245,16 @@
   .add:hover { color: var(--text); border-color: var(--muted); }
   .add:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 
-  /* Phone strip: compact pills in a swipeable row. */
+  /* Phone strip: compact pills in a swipeable row, edit buttons beside the
+     name and the add buttons last. */
   .strip { gap: 8px; overflow-x: auto; scrollbar-width: none; }
   .strip :global(.fsw), .strip .fs { height: 48px; }
   .strip :global(.fsw-press) { gap: 8px; }
-  .strip .fs { width: auto; }
-  .strip .press { display: flex; gap: 8px; }
+  .strip .fs { width: auto; display: flex; align-items: center; }
+  .strip .press { display: flex; gap: 8px; width: auto; padding-right: 4px; }
   .strip .led { width: 10px; height: 10px; }
+  .strip :global(.fsw-edit), .strip .edit { position: static; flex: none; width: 32px; height: 32px; margin-right: 6px; }
+  .strip .add { order: 1; height: 48px; padding: 0 14px; }
 
   /* Phone play view: big switches, two to a row. */
   .big {
