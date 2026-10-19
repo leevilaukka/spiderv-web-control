@@ -4,7 +4,7 @@
   import { shortcuts } from '../shortcuts.svelte';
   import { type Shortcut, keyConflict, knobControl } from '../shortcuts';
   import { type Control, displayScale } from '../tone';
-  import { MsgType } from '../protocol/codec';
+  import { MsgType } from 'spiderv-protocol/codec';
   import { keyLabel } from '../keys.svelte';
   import { groupColor } from '../colors';
   import { controls } from '../controls.svelte';

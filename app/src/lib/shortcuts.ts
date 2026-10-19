@@ -2,7 +2,7 @@
 // that switch several blocks and set knobs at once, like the assignable CTL
 // switches on a Boss GX-100. Like those, they belong to a preset.
 import { type Control, type Slot } from './tone';
-import { MsgType } from './protocol/codec';
+import { MsgType } from 'spiderv-protocol/codec';
 
 // Pedalboard keys: fixed per block (not per chain position) so they don't
 // move when a preset puts an effect post-amp. Matched by physical key.

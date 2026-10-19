@@ -1,0 +1,44 @@
+{
+  "name": "spiderv-protocol",
+  "version": "0.1.0",
+  "description": "Client for the Line 6 Spider V amp protocol (SysEx over USB MIDI), reverse-engineered. Not affiliated with Line 6.",
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leevilaukka/spiderv-web-control.git",
+    "directory": "packages/spiderv"
+  },
+  "homepage": "https://github.com/leevilaukka/spiderv-web-control/tree/main/packages/spiderv#readme",
+  "bugs": "https://github.com/leevilaukka/spiderv-web-control/issues",
+  "scripts": {
+    "build": "bun build.ts",
+    "prepublishOnly": "echo 'Publish the built package: bun run build:lib, then npm publish ./dist' && exit 1"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./codec": "./src/codec.ts",
+    "./client": "./src/client.ts",
+    "./hub": "./src/hub.ts",
+    "./webmidi": "./src/webmidi.ts",
+    "./nodemidi": "./src/nodemidi.ts"
+  },
+  "files": [
+    "src"
+  ],
+  "peerDependencies": {
+    "@julusian/midi": "^3.6.0"
+  },
+  "peerDependenciesMeta": {
+    "@julusian/midi": {
+      "optional": true
+    }
+  },
+  "keywords": [
+    "line6",
+    "spider-v",
+    "midi",
+    "sysex",
+    "amp"
+  ]
+}

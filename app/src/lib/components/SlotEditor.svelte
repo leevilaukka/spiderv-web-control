@@ -1,7 +1,7 @@
 <script lang="ts">
   import { amp } from '../amp.svelte';
   import { type Control, type Slot, MICS, modelChoices, noteChoices } from '../tone';
-  import { MsgType } from '../protocol/codec';
+  import { MsgType } from 'spiderv-protocol/codec';
   import { groupColor } from '../colors';
   import Knob from './Knob.svelte';
   import Switch from './Switch.svelte';

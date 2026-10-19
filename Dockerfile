@@ -3,9 +3,12 @@
 # container needs no USB access. See README ("Run it in a container").
 
 FROM oven/bun:1-alpine AS build
-WORKDIR /src/app
-COPY app/package.json app/bun.lock ./
+WORKDIR /src
+COPY package.json bun.lock ./
+COPY app/package.json app/
+COPY packages/spiderv/ packages/spiderv/
 RUN bun install --frozen-lockfile
+WORKDIR /src/app
 COPY app/ ./
 # Demo mode bundles the recorded session and test catalog from the tests.
 COPY test/fixtures/spiderv20-mkii-session.json test/fixtures/test-catalog.json /src/test/fixtures/

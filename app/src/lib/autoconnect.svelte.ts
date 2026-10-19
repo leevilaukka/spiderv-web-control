@@ -3,7 +3,7 @@
 // plugged in, and when it comes back after a dropout. Disconnect stops that
 // until the amp is unplugged.
 import { amp } from './amp.svelte';
-import { WebMidiTransport } from './protocol/webmidi';
+import { WebMidiTransport } from 'spiderv-protocol/webmidi';
 
 // Gives the amp a moment after its port appears, e.g. while it starts up.
 const SETTLE_MS = 800;

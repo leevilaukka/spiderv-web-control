@@ -2,8 +2,8 @@
 // browser that is connected to it: SysEx travels over a WebSocket relay
 // (remote-relay.ts) to that browser's hub (hub.ts). Works without Web MIDI,
 // so iPhones can be remotes too.
-import type { Bytes } from './codec';
-import type { Transport } from './client';
+import type { Bytes } from 'spiderv-protocol/codec';
+import type { Transport } from 'spiderv-protocol/client';
 
 // Messages between the host page and a remote, besides SysEx.
 export type AppMessage = { t: string; [k: string]: unknown };

@@ -3,11 +3,11 @@ import { expect, test } from 'bun:test';
 import session from './fixtures/spiderv20-mkii-session.json';
 import line6Tone from './fixtures/line6-arachnid-rhythm.json';
 import { readFileSync } from 'node:fs';
-import { SpiderV } from '../app/src/lib/protocol/client';
+import { SpiderV } from 'spiderv-protocol/client';
 import { MockTransport } from '../app/src/lib/protocol/mock';
 import { applyImport, planImport, readToneFile, toToneFile } from '../app/src/lib/presetfile';
 import { buildChain } from '../app/src/lib/tone';
-import { MsgType, PresetKey } from '../app/src/lib/protocol/codec';
+import { MsgType, PresetKey } from 'spiderv-protocol/codec';
 
 const bytesOf = (v: unknown) => [...new TextEncoder().encode(JSON.stringify(v))];
 

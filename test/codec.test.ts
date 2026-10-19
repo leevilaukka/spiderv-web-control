@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import {
   type Message, EditorCmd, Kind, LibrarianCmd, MsgType, Reassembler, crc32, decodeParamChange, decodePresetInfo,
   encodeMessage, encodeSysex, encodeTyped, le32, pack7, parsePreset, parseSysex, unpack7,
-} from '../app/src/lib/protocol/codec';
+} from 'spiderv-protocol/codec';
 
 const capture = readFileSync(new URL('./fixtures/spiderv30-remote-capture.txt', import.meta.url), 'utf8')
   .trim().split('\n').map((l) => {

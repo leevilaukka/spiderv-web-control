@@ -1,8 +1,8 @@
 // Application state: one connected amp, its presets and the current tone.
-import { SpiderV, type LogEntry, type Transport } from './protocol/client';
-import { type Bytes, type ParamChange, MsgType, PresetKey, i32, le32 } from './protocol/codec';
-import { WebMidiTransport } from './protocol/webmidi';
-import { Hub } from './protocol/hub';
+import { SpiderV, type LogEntry, type Transport } from 'spiderv-protocol/client';
+import { type Bytes, type ParamChange, MsgType, PresetKey, i32, le32 } from 'spiderv-protocol/codec';
+import { WebMidiTransport } from 'spiderv-protocol/webmidi';
+import { Hub } from 'spiderv-protocol/hub';
 import { RemoteTransport } from './protocol/remote';
 import { catalogStore } from './catalog.svelte';
 import { type Control, type Slot, MICS, NOTES, buildChain, clampTempo, splitCab } from './tone';

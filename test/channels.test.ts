@@ -2,7 +2,7 @@
 // storage of per-preset extras.
 import { expect, test } from 'bun:test';
 import session from './fixtures/spiderv20-mkii-session.json';
-import { SpiderV } from '../app/src/lib/protocol/client';
+import { SpiderV } from 'spiderv-protocol/client';
 import { MockTransport } from '../app/src/lib/protocol/mock';
 import { applyImport, planImport, toToneFile } from '../app/src/lib/presetfile';
 import { completeGroups, parsePresetExtras, pickGroups, readExtras, switchTone } from '../app/src/lib/channels';

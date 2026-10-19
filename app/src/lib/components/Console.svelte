@@ -1,8 +1,8 @@
 <script lang="ts">
   // Protocol log plus a raw command line, for exploring the protocol further.
   import { amp } from '../amp.svelte';
-  import { toHex } from '../protocol/codec';
-  import type { LogEntry } from '../protocol/client';
+  import { toHex } from 'spiderv-protocol/codec';
+  import type { LogEntry } from 'spiderv-protocol/client';
 
   let showRaw = $state(false);
   let command = $state('');

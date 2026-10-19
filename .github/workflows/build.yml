@@ -20,9 +20,7 @@ jobs:
           bun-version: latest
 
       - name: Install
-        run: |
-          bun install --frozen-lockfile
-          cd app && bun install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Test
         run: bun test

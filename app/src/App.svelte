@@ -15,7 +15,7 @@
   import UpdateBanner from './lib/components/UpdateBanner.svelte';
   import { controls } from './lib/controls.svelte';
   import { assistant } from './lib/assistant.svelte';
-  import { WebMidiTransport } from './lib/protocol/webmidi';
+  import { WebMidiTransport } from 'spiderv-protocol/webmidi';
   import { normalizeCode, relayAvailable, remote } from './lib/remote.svelte';
   import { importFile } from './lib/settings.svelte';
   import { autoConnect } from './lib/autoconnect.svelte';

@@ -1,9 +1,9 @@
 // Saving presets (SetPresetFile) against the simulated amp.
 import { expect, test } from 'bun:test';
 import session from './fixtures/spiderv20-mkii-session.json';
-import { SpiderV } from '../app/src/lib/protocol/client';
+import { SpiderV } from 'spiderv-protocol/client';
 import { MockTransport } from '../app/src/lib/protocol/mock';
-import { MsgType, PRESET_NAME_MAX, PresetKey, parseEntries, renamePresetData, serializeEntries } from '../app/src/lib/protocol/codec';
+import { MsgType, PRESET_NAME_MAX, PresetKey, parseEntries, renamePresetData, serializeEntries } from 'spiderv-protocol/codec';
 import { applyImport, planImport, readToneFile } from '../app/src/lib/presetfile';
 import { readFileSync } from 'node:fs';
 

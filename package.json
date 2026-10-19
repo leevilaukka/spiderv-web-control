@@ -8,9 +8,16 @@
     "build:exe": "bun run build && bun tools/build-exe.ts",
     "check": "cd app && bun run check",
     "test": "bun test",
-    "cli": "bun tools/spiderv-cli.ts"
+    "cli": "bun tools/spiderv-cli.ts",
+    "build:lib": "cd packages/spiderv && bun build.ts"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.3"
-  }
+    "@julusian/midi": "^3.8.1",
+    "@types/bun": "^1.4.3",
+    "spiderv-protocol": "workspace:*"
+  },
+  "workspaces": [
+    "packages/*",
+    "app"
+  ]
 }

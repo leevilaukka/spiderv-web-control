@@ -2,10 +2,10 @@
 // The computer shares its connection through the relay in the dev server
 // (remote-relay.ts); phones join with a pairing code, usually by scanning a
 // QR code. Each phone runs the whole app against a port of the computer's
-// hub (protocol/hub.ts), and the browsers keep the shortcuts and channels in
+// hub (spiderv-protocol's hub.ts), and the browsers keep the shortcuts and channels in
 // step (amp.shared()).
 import { type SharedState, amp } from './amp.svelte';
-import type { HubPort } from './protocol/hub';
+import type { HubPort } from 'spiderv-protocol/hub';
 import { type AppMessage, RemoteTransport, relayUrl } from './protocol/remote';
 import { keepAwake } from './keepawake.svelte';
 import { catalogStore } from './catalog.svelte';

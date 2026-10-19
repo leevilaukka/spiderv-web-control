@@ -7,7 +7,7 @@ import { anthropic } from './ai/anthropic';
 import { gemini } from './ai/gemini';
 import type { Conversation, Provider, ProviderId, ToolCall, ToolResult, ToolSpec, UserTurn } from './ai/provider';
 import type { ToneFile } from './presetfile';
-import { PRESET_NAME_MAX } from './protocol/codec';
+import { PRESET_NAME_MAX } from 'spiderv-protocol/codec';
 import { type Change, GROUPS, MIC_NAMES, catalogPrompt, checkTone, diffTones } from './tonedesign';
 import { type Shortcut, GROUP_BLOCKS, mergeShortcutSpecs, toSpec } from './shortcuts';
 import { shortcuts } from './shortcuts.svelte';

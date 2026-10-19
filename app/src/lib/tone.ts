@@ -1,6 +1,6 @@
 // Turns a parsed preset + the amp's symbol table + the model catalog into an
 // editable view of the signal chain.
-import { type Block, type Preset, MsgType, SymbolTable, VType } from './protocol/codec';
+import { type Block, type Preset, MsgType, SymbolTable, VType } from 'spiderv-protocol/codec';
 
 // The model catalog: display names, parameter names and ranges, and which
 // models each slot takes. It comes from Line 6's Spider Remote app, so it

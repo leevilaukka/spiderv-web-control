@@ -1,7 +1,7 @@
 // Tone assistant proposals: catalog checks and application to the simulated amp.
 import { expect, test } from 'bun:test';
 import session from './fixtures/spiderv20-mkii-session.json';
-import { SpiderV } from '../app/src/lib/protocol/client';
+import { SpiderV } from 'spiderv-protocol/client';
 import { MockTransport } from '../app/src/lib/protocol/mock';
 import { applyImport, planImport, toToneFile } from '../app/src/lib/presetfile';
 import { catalogPrompt, checkTone, diffTones } from '../app/src/lib/tonedesign';

@@ -27,6 +27,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.135.0",
     "@google/genai": "^2.30.0",
-    "qrcode-generator": "^2.0.4"
+    "qrcode-generator": "^2.0.4",
+    "spiderv-protocol": "workspace:*"
   }
 }

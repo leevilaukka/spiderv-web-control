@@ -2,9 +2,9 @@
 // Spider V 20 MkII (fw 2.0.1) session.
 import { expect, test } from 'bun:test';
 import session from './fixtures/spiderv20-mkii-session.json';
-import { SpiderV } from '../app/src/lib/protocol/client';
+import { SpiderV } from 'spiderv-protocol/client';
 import { MockTransport } from '../app/src/lib/protocol/mock';
-import { MsgType, crc32 } from '../app/src/lib/protocol/codec';
+import { MsgType, crc32 } from 'spiderv-protocol/codec';
 import { buildChain, modelChoices } from '../app/src/lib/tone';
 
 async function connect() {

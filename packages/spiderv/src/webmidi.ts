@@ -2,12 +2,14 @@
 // the OS exposes it as a MIDI port ("Spider V 20 MIDI 1" on Linux/ALSA).
 import type { Bytes } from './codec';
 import type { Transport } from './client';
+import { SysexFramer } from './framing';
 
 const PORT_MATCH = /spider ?v/i;
 
 export class WebMidiTransport implements Transport {
   label: string;
   onsysex: (b: Bytes) => void = () => {};
+  private framer = new SysexFramer((b) => this.onsysex(b));
   ondisconnect: (e?: unknown) => void = () => {};
 
   private constructor(private access: MIDIAccess, private input: MIDIInput, private output: MIDIOutput) {
@@ -40,27 +42,11 @@ export class WebMidiTransport implements Transport {
   private async open() {
     await this.input.open();
     await this.output.open();
-    this.input.onmidimessage = (e) => { if (e.data) this.receive(e.data); };
+    this.input.onmidimessage = (e) => { if (e.data) this.framer.push(e.data); };
     this.access.onstatechange = (e) => {
       const port = (e as MIDIConnectionEvent).port;
       if (port?.id === this.output.id && port.state === 'disconnected') this.ondisconnect();
     };
-  }
-
-  // An event may carry several SysEx messages (or realtime bytes between
-  // them); hand each complete F0..F7 run over separately.
-  private rx: Bytes = [];
-  private receive(data: Uint8Array) {
-    for (const b of data) {
-      if (b >= 0xf8) continue; // realtime
-      if (b === 0xf0) this.rx = [];
-      else if (b & 0x80 && b !== 0xf7) { this.rx = []; continue; }
-      this.rx.push(b);
-      if (b === 0xf7) {
-        if (this.rx[0] === 0xf0) this.onsysex(this.rx);
-        this.rx = [];
-      }
-    }
   }
 
   send(bytes: Bytes) { this.output.send(bytes); }

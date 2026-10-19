@@ -34,9 +34,9 @@ test('note values follow Line 6: delays count up, modulations down', () => {
 });
 
 test('the simulated amp keeps the tempo and sync settings', async () => {
-  const { SpiderV } = await import('../app/src/lib/protocol/client');
+  const { SpiderV } = await import('spiderv-protocol/client');
   const { MockTransport } = await import('../app/src/lib/protocol/mock');
-  const { PresetKey, MsgType } = await import('../app/src/lib/protocol/codec');
+  const { PresetKey, MsgType } = await import('spiderv-protocol/codec');
   const { buildChain } = await import('../app/src/lib/tone');
   const session = (await import('./fixtures/spiderv20-mkii-session.json')).default;
   const mock = new MockTransport(session);

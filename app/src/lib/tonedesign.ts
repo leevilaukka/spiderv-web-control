@@ -2,7 +2,7 @@
 // proposals go through before they reach the edit buffer. A proposal has the
 // shape of a tone file's `tone` object ({ amp: { "@model": ..., Drive: ... } }),
 // so it is applied with the same planImport/applyImport path as files.
-import { PRESET_NAME_MAX, SymbolTable } from './protocol/codec';
+import { PRESET_NAME_MAX, SymbolTable } from 'spiderv-protocol/codec';
 import { type CatalogParam, clampTempo, type ModelList, MICS, NOTES, SYNC_PARAM, catalog, humanize, modelChoices, noteName } from './tone';
 import type { ToneFile, ToneGroup } from './presetfile';
 

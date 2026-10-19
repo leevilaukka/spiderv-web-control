@@ -5,8 +5,8 @@
 //
 // Importing turns a file into a list of edits for the amp's edit buffer;
 // nothing is written to the amp's preset memory.
-import { type Block, type Bytes, type Preset, MsgType, PresetKey, SymbolTable, VType, parsePreset } from './protocol/codec';
-import type { SpiderV } from './protocol/client';
+import { type Block, type Bytes, type Preset, MsgType, PresetKey, SymbolTable, VType, parsePreset } from 'spiderv-protocol/codec';
+import type { SpiderV } from 'spiderv-protocol/client';
 import { MICS, SYNC_PARAM, catalog, splitCab } from './tone';
 
 export type ToneGroup = Record<string, number | string | boolean>;

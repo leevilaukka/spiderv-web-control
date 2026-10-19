@@ -5,8 +5,8 @@ import {
   type Bytes, type Entry, Channel, EditorCmd, Kind, LibrarianCmd, MetaKey, MsgType, PresetKey, Reassembler, SymbolTable, SysParam, VType,
   crc32, decodeTyped, encodeMessage, encodeSysex, encodeTyped, i32, le32, parseEntries, parseSysex, renamePresetData,
   serializeEntries, u32,
-} from './codec';
-import type { Transport } from './client';
+} from 'spiderv-protocol/codec';
+import type { Transport } from 'spiderv-protocol/client';
 import { catalog } from '../tone';
 
 export type Session = {

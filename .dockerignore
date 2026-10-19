@@ -2,6 +2,9 @@
 # certificate in .cache, node_modules) stays out of the build context.
 *
 !app
+!package.json
+!bun.lock
+!packages
 app/node_modules
 app/dist
 # Line 6's model catalog, if made locally; images load it at runtime instead.

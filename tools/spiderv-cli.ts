@@ -20,8 +20,8 @@
 //   record <file.json>            save symbol table, names and current preset
 //   raw <ch> <cmd> [u32 words...] send a raw command, print the reply
 import fs from 'node:fs';
-import { SpiderV, type Transport } from '../app/src/lib/protocol/client';
-import { type Block, type Bytes, Channel, MsgType, SymbolTable, VType, i32, le32, toHex } from '../app/src/lib/protocol/codec';
+import { SpiderV, type Transport } from 'spiderv-protocol/client';
+import { type Block, type Bytes, Channel, MsgType, SymbolTable, VType, i32, le32, toHex } from 'spiderv-protocol/codec';
 import { applyImport, planImport, readToneFile } from '../app/src/lib/presetfile';
 
 class RawMidiTransport implements Transport {

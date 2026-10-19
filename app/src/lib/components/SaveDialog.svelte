@@ -1,6 +1,6 @@
 <script lang="ts">
   import { amp } from '../amp.svelte';
-  import { PRESET_NAME_MAX } from '../protocol/codec';
+  import { PRESET_NAME_MAX } from 'spiderv-protocol/codec';
 
 
   let dialog: HTMLDialogElement | undefined = $state();

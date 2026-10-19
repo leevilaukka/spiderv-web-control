@@ -1,10 +1,10 @@
 // Sharing one amp between clients (the app and remote phones) through the hub.
 import { expect, test } from 'bun:test';
 import session from './fixtures/spiderv20-mkii-session.json';
-import { SpiderV } from '../app/src/lib/protocol/client';
-import { Hub } from '../app/src/lib/protocol/hub';
+import { SpiderV } from 'spiderv-protocol/client';
+import { Hub } from 'spiderv-protocol/hub';
 import { MockTransport } from '../app/src/lib/protocol/mock';
-import { type ParamChange, Channel, EditorCmd, MsgType, crc32 } from '../app/src/lib/protocol/codec';
+import { type ParamChange, Channel, EditorCmd, MsgType, crc32 } from 'spiderv-protocol/codec';
 import { buildChain } from '../app/src/lib/tone';
 
 async function setup() {

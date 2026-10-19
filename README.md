@@ -141,7 +141,7 @@ serve the app over HTTPS with `bun run dev:phone` (see below for the certificate
 
 How it works: the dev server relays WebSocket messages between the computer's tab and the phones
 (`app/remote-relay.ts`). Each phone runs the whole app on a port of the computer's hub
-(`app/src/lib/protocol/hub.ts`), which forwards everyone's requests to the amp one at a time per
+(`packages/spiderv/src/hub.ts`), which forwards everyone's requests to the amp one at a time per
 channel and routes each reply back to whoever asked. The hub answers handshakes and symbol table
 requests itself, and tells the other browsers about knob changes, since the amp doesn't report
 changes made over USB. Shortcuts and channels (normally kept in one browser) are synced between them.

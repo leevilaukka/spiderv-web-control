@@ -2,7 +2,7 @@
 // expression pedals, and the tone assistant's set_shortcuts input.
 import { expect, test } from 'bun:test';
 import session from './fixtures/spiderv20-mkii-session.json';
-import { SpiderV } from '../app/src/lib/protocol/client';
+import { SpiderV } from 'spiderv-protocol/client';
 import { MockTransport } from '../app/src/lib/protocol/mock';
 import { buildChain } from '../app/src/lib/tone';
 import {
