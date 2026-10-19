@@ -1,6 +1,6 @@
 {
   "name": "spiderv-protocol",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Client for the Line 6 Spider V amp protocol (SysEx over USB MIDI), reverse-engineered. Not affiliated with Line 6.",
   "type": "module",
   "license": "MIT",
@@ -22,7 +22,9 @@
     "./hub": "./src/hub.ts",
     "./webmidi": "./src/webmidi.ts",
     "./nodemidi": "./src/nodemidi.ts",
-    "./framing": "./src/framing.ts"
+    "./framing": "./src/framing.ts",
+    "./catalog": "./src/catalog.ts",
+    "./nodecatalog": "./src/nodecatalog.ts"
   },
   "files": [
     "src"
@@ -41,5 +43,8 @@
     "midi",
     "sysex",
     "amp"
-  ]
+  ],
+  "devDependencies": {
+    "@types/node": "^24"
+  }
 }

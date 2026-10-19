@@ -8,7 +8,7 @@ import { SpiderV } from 'spiderv-protocol/client';
 import { MockTransport } from '../app/src/lib/protocol/mock';
 import { MsgType } from 'spiderv-protocol/codec';
 import { type Catalog, buildChain, hasCatalog, modelChoices, setCatalog, validCatalog } from '../app/src/lib/tone';
-import { CATALOG_FILES, catalogFromApk } from '../app/src/lib/catalogextract';
+import { CATALOG_FILES, catalogFromApk } from 'spiderv-protocol/catalog';
 import { planImport, toToneFile } from '../app/src/lib/presetfile';
 
 afterEach(() => setCatalog(testCatalog as unknown as Catalog));

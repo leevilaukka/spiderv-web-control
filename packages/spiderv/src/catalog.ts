@@ -1,8 +1,31 @@
-// Builds the model catalog (tone.ts) from the assets of Line 6's Spider
-// Remote Android app: model and parameter definitions (*.models) and the
-// model lists per slot (*Catalog.json). Runs in the browser, which reads the
-// user's own copy of the APK, and in tools/extract-catalog.ts.
-import type { Catalog, CatalogModel } from './tone';
+// The model catalog: display names, parameter names and ranges, and which
+// models each slot takes. It comes from Line 6's Spider Remote Android app and
+// is not part of this package; build it from the user's own copy of the app
+// (model and parameter definitions in *.models, model lists per slot in
+// *Catalog.json). Works in browsers, Node and Bun.
+
+export type CatalogParam = { sym: string; name: string; min: number; max: number; def: number | boolean; type: number };
+export type CatalogModel = { name: string; short: string; group: string; params: CatalogParam[] };
+export type Catalog = {
+  source?: string;
+  models: Record<string, CatalogModel>;
+  lists: Record<'amp' | 'fx' | 'reverb' | 'wah' | 'cab', { category: string; models: string[] }[]>;
+};
+export const EMPTY_CATALOG: Catalog = { models: {}, lists: { amp: [], fx: [], reverb: [], wah: [], cab: [] } };
+
+// Checks the shape of a catalog read from a file or another program.
+export function validCatalog(v: unknown): v is Catalog {
+  const c = v as Catalog;
+  return !!c && typeof c === 'object' && !!c.models && typeof c.models === 'object' && !!c.lists
+    && (['amp', 'fx', 'reverb', 'wah', 'cab'] as const).every((k) => Array.isArray(c.lists[k]))
+    && Object.values(c.models).every((m) => m && typeof m.name === 'string' && Array.isArray(m.params));
+}
+
+// Lookups by symbol name (the names the amp's symbol table uses).
+export const modelName = (c: Catalog, sym: string) => c.models[sym]?.name;
+export const modelParams = (c: Catalog, sym: string): CatalogParam[] => c.models[sym]?.params ?? [];
+export const paramInfo = (c: Catalog, modelSym: string, paramSym: string) =>
+  c.models[modelSym]?.params.find((p) => p.sym === paramSym);
 
 type RawParam = { symbolicID: string; name?: string; min: unknown; max: unknown; default: unknown; valueType: number };
 type RawModel = { symbolicID: string; name?: string; shortname?: string; params: RawParam[] };

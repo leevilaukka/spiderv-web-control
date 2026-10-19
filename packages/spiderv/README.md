@@ -57,6 +57,8 @@ channel, so calls made together are queued, not sent in parallel. Failed calls t
 | `spiderv-protocol/hub` | `Hub`: share one amp connection between several clients |
 | `spiderv-protocol/webmidi` | `WebMidiTransport` for browsers |
 | `spiderv-protocol/nodemidi` | `NodeMidiTransport` for Node and Bun |
+| `spiderv-protocol/catalog` | the model catalog types, `catalogFromApk`, `buildCatalog`, `validCatalog`, lookups |
+| `spiderv-protocol/nodecatalog` | `loadCatalog(path)` and `saveCatalog` for Node and Bun |
 | `spiderv-protocol/framing` | `SysexFramer`, for building your own transport |
 | `spiderv-protocol` | all of the above |
 
@@ -190,12 +192,45 @@ The web app uses this to let phones control the amp through the browser it is pl
 such as reading preset dumps, or to send commands the client has no method for with
 `amp.request(...)`.
 
-## Not included
+## The model catalog
 
-The model catalog (names, value ranges and descriptions of the amp, effect and cab models) is
-Line 6's and is not part of this package. The amp does not report knob ranges itself. Apps need
-to load a catalog extracted from your own copy of Line 6's Spider V Remote app. See the web app's
-README for how it does that.
+The client doesn't need it, but it is what turns symbols into something a person can read:
+display names ("Line 6 Vetta"), knob names, ranges and defaults, and the list of models each slot
+accepts. The amp doesn't report knob ranges itself.
+
+The catalog is Line 6's data and is **not part of this package**. You build it once from your own
+copy of Line 6's Spider V Remote Android app (the APK, or an `.xapk`/`.apks` bundle or a zip of its
+assets):
+
+```ts
+import { loadCatalog, saveCatalog } from 'spiderv-protocol/nodecatalog';
+
+const catalog = await loadCatalog('SpiderRemote.apk'); // also takes a folder of assets, or a saved .json
+await saveCatalog(catalog, 'catalog.json');            // next time: loadCatalog('catalog.json')
+```
+
+In a browser (or anywhere you already have the bytes), use the platform-neutral entry, which has
+no Node dependency:
+
+```ts
+import { catalogFromApk, validCatalog } from 'spiderv-protocol/catalog';
+
+const catalog = await catalogFromApk(new Uint8Array(await file.arrayBuffer())); // a File from <input type=file>
+```
+
+Then look things up by symbol name, the same names the amp's symbol table uses:
+
+```ts
+import { modelName, modelParams, paramInfo } from 'spiderv-protocol/catalog';
+
+modelName(catalog, 'Line6Vetta');                 // display name, or undefined
+modelParams(catalog, 'Line6Vetta');               // [{ sym, name, min, max, def, type }, ...]
+paramInfo(catalog, 'Line6Vetta', 'Drive');        // one parameter's range and default
+catalog.lists.amp;                                // [{ category, models: [symbol, ...] }, ...] for the amp slot
+```
+
+`catalog.lists` has `amp`, `fx`, `reverb`, `wah` and `cab`. `validCatalog(x)` checks the shape of a
+catalog loaded from JSON. Keep the generated `catalog.json` out of anything you publish or commit.
 
 ## Safety
 

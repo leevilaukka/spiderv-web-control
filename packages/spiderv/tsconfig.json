@@ -6,6 +6,7 @@
     "moduleResolution": "bundler",
     "strict": true,
     "skipLibCheck": true,
+    "types": ["node"],
     "declaration": true,
     "emitDeclarationOnly": true,
     "outDir": "dist",

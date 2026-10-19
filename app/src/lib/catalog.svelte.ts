@@ -5,7 +5,7 @@
 // Demo mode uses a small catalog made for the tests; a phone used as a remote
 // gets the computer's.
 import { type Catalog, hasCatalog, setCatalog, validCatalog } from './tone';
-import { catalogFromApk } from './catalogextract';
+import { catalogFromApk } from 'spiderv-protocol/catalog';
 
 const STORAGE_KEY = 'spiderv.catalog';
 

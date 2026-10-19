@@ -3,29 +3,16 @@
 import { type Block, type Preset, MsgType, SymbolTable, VType } from 'spiderv-protocol/codec';
 
 // The model catalog: display names, parameter names and ranges, and which
-// models each slot takes. It comes from Line 6's Spider Remote app, so it
-// isn't part of this project; the user loads it (catalog.svelte.ts). Without
-// it, names are made from the amp's symbols and models can't be changed.
-export type CatalogParam = { sym: string; name: string; min: number; max: number; def: number | boolean; type: number };
-export type CatalogModel = { name: string; short: string; group: string; params: CatalogParam[] };
-export type Catalog = {
-  source?: string;
-  models: Record<string, CatalogModel>;
-  lists: Record<'amp' | 'fx' | 'reverb' | 'wah' | 'cab', { category: string; models: string[] }[]>;
-};
-export const EMPTY_CATALOG: Catalog = { models: {}, lists: { amp: [], fx: [], reverb: [], wah: [], cab: [] } };
+// models each slot takes (types and loading: spiderv-protocol/catalog). It
+// comes from Line 6's Spider Remote app, so it isn't part of this project; the
+// user loads it (catalog.svelte.ts). Without it, names are made from the
+// amp's symbols and models can't be changed.
+import { type Catalog, EMPTY_CATALOG } from 'spiderv-protocol/catalog';
+export { type Catalog, type CatalogModel, type CatalogParam, EMPTY_CATALOG, validCatalog } from 'spiderv-protocol/catalog';
 
 export let catalog: Catalog = EMPTY_CATALOG;
 export function setCatalog(c: Catalog | null) { catalog = c ?? EMPTY_CATALOG; }
 export const hasCatalog = () => catalog !== EMPTY_CATALOG;
-
-// Checks the shape of a catalog read from a file or another browser.
-export function validCatalog(v: unknown): v is Catalog {
-  const c = v as Catalog;
-  return !!c && typeof c === 'object' && !!c.models && typeof c.models === 'object' && !!c.lists
-    && (['amp', 'fx', 'reverb', 'wah', 'cab'] as const).every((k) => Array.isArray(c.lists[k]))
-    && Object.values(c.models).every((m) => m && typeof m.name === 'string' && Array.isArray(m.params));
-}
 
 export type ModelList = keyof Catalog['lists'];
 
