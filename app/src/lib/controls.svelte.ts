@@ -2,6 +2,7 @@
 // the play view, and MIDI pedals (foot controllers and expression pedals on
 // any MIDI input other than the amp).
 import { amp } from './amp.svelte';
+import { pedalMessage } from './midi';
 import { shortcuts } from './shortcuts.svelte';
 import { ui } from './ui.svelte';
 
@@ -122,15 +123,16 @@ class Controls {
   // switches that send 127/0 and ones that send 127 on each press both
   // work); a momentary one follows the value, which also suits latching
   // switches. Expression pedals send 0..127 continuously.
-  receive(data: Uint8Array | number[]) {
-    const [status, d1 = 0, d2 = 0] = data;
-    const type = status & 0xf0;
-    if (type === 0xc0) {
-      this.lastMidi = `Program change ${d1 + 1}`;
-      if (this.settings.programChange && d1 < amp.presets.length && d1 !== amp.current) amp.selectPreset(d1);
+  receive(data: ArrayLike<unknown>) {
+    const m = pedalMessage(data);
+    if (!m) return;
+    if (m.kind === 'program') {
+      const p = m.program;
+      this.lastMidi = `Program change ${p + 1}`;
+      if (this.settings.programChange && p < amp.presets.length && p !== amp.current) amp.selectPreset(p);
       return;
     }
-    if (type !== 0xb0) return;
+    const { cc: d1, value: d2 } = m;
     this.lastMidi = `CC ${d1} = ${d2}`;
     if (this.learner) {
       const done = this.learner;
