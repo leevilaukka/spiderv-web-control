@@ -10,15 +10,19 @@ Tested with a Spider V 20 MkII on firmware 2.0.1.
   volume pedal before or after the amp, and effects in any order on each side
 - Turn every parameter knob, with names and ranges from Line 6's model catalog, which you load from
   your own copy of the Spider Remote app (see [Model catalog](#model-catalog))
+- **Tempo sync** for delays and modulations: switch it on and pick the note value (1/8 dotted, 1/4 …);
+  the Time or Speed knob takes over again when it's off
 - Follows preset changes and edits made on the amp itself
 - **GX-100-style performance controls**, kept per preset in the browser and saved along with the tone:
   - **Shortcuts** switch several blocks and set knobs at once (like CTL/assign switches with min/max),
     on a key, a button or a MIDI footswitch; toggle or momentary
+  - **Tap tempo**: tap a button, a key or a MIDI footswitch (or the amp's own tap) to set the preset's tempo,
+    or type it; the LED blinks on the beat
   - **Channels A/B**: two setups of the amp, cab or any blocks in one preset, switched with one key,
     like a switched dual amp or two-way chain (the Spider V has one amp, so they take turns)
   - **Stage view**: big footswitch buttons; memory mode picks presets in banks of four, manual mode switches blocks
     (long-press or right-click a block to turn its knobs without leaving the stage view)
-  - **MIDI pedals**: program change selects presets, footswitches trigger shortcuts or the channel switch,
+  - **MIDI pedals**: program change selects presets, footswitches trigger shortcuts, tap tempo or the channel switch,
     and an expression pedal sweeps a shortcut's knobs
   - The tone assistant can set up shortcuts and channels too
   - **Export and import the app settings** (amp menu) to back them up or move them to another browser:
@@ -61,7 +65,11 @@ Edits and imported tones go to the amp's edit buffer. **Save…** writes the edi
 to a preset slot the way Spider V Remote does (`SetPresetFile`); right after saving
 you can **Undo**, which writes the slot's previous contents back. Consider
 **Back up all presets** first. Tone-file settings with no counterpart on the amp
-(tempo sync flags, expression pedal assignment, speaker mode) are listed as not supported.
+(the expression pedal assignment) are listed as not supported.
+
+The cab editor has the **Speaker** setting from firmware 2.00 on: **Classic** plays through the
+woofer only, voiced for the amp, and ignores the cabinet and mic models; **Full Range** uses them.
+It is stored with the preset and carried in tone files as `global.@speakermode`.
 
 ## Run it in a container
 

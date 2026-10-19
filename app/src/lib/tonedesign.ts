@@ -3,12 +3,15 @@
 // shape of a tone file's `tone` object ({ amp: { "@model": ..., Drive: ... } }),
 // so it is applied with the same planImport/applyImport path as files.
 import { PRESET_NAME_MAX, SymbolTable } from './protocol/codec';
-import { type CatalogParam, type ModelList, MICS, catalog, humanize, modelChoices } from './tone';
+import { type CatalogParam, clampTempo, type ModelList, MICS, NOTES, SYNC_PARAM, catalog, humanize, modelChoices, noteName } from './tone';
 import type { ToneFile, ToneGroup } from './presetfile';
 
-type GroupDef = { label: string; list?: ModelList; fixed?: string; keys: Record<string, 'bool' | 'unit' | 'mic'> };
+type GroupDef = { label: string; list?: ModelList; fixed?: string; keys: Record<string, 'bool' | 'unit' | 'mic' | 'note'> };
 
-const FX_KEYS = { '@enabled': 'bool', '@mix': 'unit', '@post': 'bool' } as const;
+// Tempo sync (@temposync, SyncSelect) applies only to models that have it.
+const FX_KEYS = { '@enabled': 'bool', '@mix': 'unit', '@post': 'bool', '@temposync': 'bool', [SYNC_PARAM]: 'note' } as const;
+const SYNC_KEYS = new Set(['@temposync', SYNC_PARAM]);
+const hasSync = (model: string) => !!catalog.models[model]?.params.some((p) => p.sym === SYNC_PARAM);
 
 // Tone file groups in signal-chain order. `keys` are the switches and levels
 // that live on GuitarProc rather than on the model.
@@ -28,10 +31,11 @@ export const GROUPS: Record<string, GroupDef> = {
 
 // Present in tone files but not settable here; dropped without comment so
 // echoing back <current_tone> values doesn't produce noise.
-const IGNORED = new Set(['@temposync', 'SyncSelect', '@speakermode', '@mixtype']);
+const IGNORED = new Set(['@speakermode', '@mixtype']);
 
+// SyncSelect is described once in the instructions rather than per model.
 const modelParams = (sym: string): CatalogParam[] =>
-  (catalog.models[sym]?.params ?? []).filter((p) => !p.sym.startsWith('@') && !IGNORED.has(p.sym));
+  (catalog.models[sym]?.params ?? []).filter((p) => !p.sym.startsWith('@') && !IGNORED.has(p.sym) && p.sym !== SYNC_PARAM);
 
 const available = (list: ModelList, st: SymbolTable) =>
   new Set(modelChoices(list, st).flatMap((c) => c.models.map((m) => m.sym)));
@@ -62,7 +66,7 @@ export function catalogPrompt(st: SymbolTable): string {
       for (const m of fresh) {
         seen.add(m.sym);
         const params = list === 'cab' ? [] : modelParams(m.sym).map(describeParam);
-        out.push(`- ${m.sym} "${m.name}"${params.length ? ': ' + params.join(', ') : ''}`);
+        out.push(`- ${m.sym} "${m.name}"${hasSync(m.sym) ? ' [sync]' : ''}${params.length ? ': ' + params.join(', ') : ''}`);
       }
     }
     out.push('');
@@ -90,6 +94,13 @@ export function checkTone(input: unknown, st: SymbolTable, current?: ToneFile): 
   const tone: Record<string, ToneGroup> = {};
 
   for (const [group, raw] of Object.entries(spec.tone as Record<string, unknown>)) {
+    if (group === 'global') {
+      // Only the tempo is settable; the speaker mode is echoed in <current_tone> and dropped.
+      const bpm = (raw as Record<string, unknown> | null)?.['@tempo'];
+      if (typeof bpm === 'number' && Number.isFinite(bpm) && bpm > 0) tone.global = { '@tempo': clampTempo(bpm) };
+      else if (bpm !== undefined) problems.push('global.@tempo: expected a number of beats per minute; ignored.');
+      continue;
+    }
     const def = GROUPS[group];
     if (!def) { problems.push(`Unknown group "${group}".`); continue; }
     if (!raw || typeof raw !== 'object') { problems.push(`${group}: expected an object.`); continue; }
@@ -112,7 +123,10 @@ export function checkTone(input: unknown, st: SymbolTable, current?: ToneFile): 
       const label = `${group}.${key}`;
       const kind = def.keys[key];
       const p = params.get(key);
-      if (!kind && !p) { problems.push(`${label}: ${catalog.models[model]?.name ?? model} has no such setting; ignored.`); continue; }
+      if ((!kind && !p) || (SYNC_KEYS.has(key) && !hasSync(model))) {
+        problems.push(`${label}: ${catalog.models[model]?.name ?? model} has no such setting; ignored.`);
+        continue;
+      }
       if (kind === 'bool' || p?.type === 2) {
         if (typeof v !== 'boolean' && v !== 0 && v !== 1) { problems.push(`${label}: expected true or false; ignored.`); continue; }
         g[key] = !!v;
@@ -120,6 +134,7 @@ export function checkTone(input: unknown, st: SymbolTable, current?: ToneFile): 
       }
       if (typeof v !== 'number' || !Number.isFinite(v)) { problems.push(`${label}: expected a number; ignored.`); continue; }
       const [min, max, int] = kind === 'mic' ? [0, MICS.length - 1, true]
+        : kind === 'note' ? [1, NOTES.length, true]
         : kind === 'unit' ? [0, 1, false]
         : [Number(p!.min), Number(p!.max), p!.type === 0];
       let n = Math.min(max, Math.max(min, v));
@@ -149,14 +164,17 @@ export function checkTone(input: unknown, st: SymbolTable, current?: ToneFile): 
 
 export type Change = { block: string; text: string };
 
-const GROUP_KEY_LABELS: Record<string, string> = { '@mix': 'Mix', '@post': 'Position', '@volume': 'Volume', '@mic': 'Mic' };
+const GROUP_KEY_LABELS: Record<string, string> = {
+  '@mix': 'Mix', '@post': 'Position', '@volume': 'Volume', '@mic': 'Mic', '@temposync': 'Tempo sync', [SYNC_PARAM]: 'Note',
+};
 
 const modelLabel = (sym: unknown) =>
   sym === '@NoCabinet' ? 'No cabinet' : catalog.models[String(sym)]?.name ?? humanize(String(sym ?? 'none'));
 
 // Formats a value the way the editor's knobs and switches show it.
-function formatValue(key: string, v: unknown, p?: CatalogParam): string {
+function formatValue(key: string, v: unknown, p?: CatalogParam, model?: string): string {
   if (key === '@post') return v ? 'after amp' : 'before amp';
+  if (key === SYNC_PARAM) return noteName(Number(v), catalog.models[model ?? '']?.group ?? '');
   if (key === '@mic') return MICS[Number(v)]?.label ?? String(v);
   if (typeof v === 'boolean') return v ? 'on' : 'off';
   const n = Number(v);
@@ -188,8 +206,11 @@ export function diffTones(before: ToneFile, after: ToneFile): Change[] {
       const old = modelChanged && !def.keys[key] ? undefined : b[key];
       if (old !== undefined && same(old, v)) continue;
       const label = GROUP_KEY_LABELS[key] ?? p?.name ?? humanize(key);
-      push(old === undefined ? `${label} ${formatValue(key, v, p)}` : `${label} ${formatValue(key, old, p)} → ${formatValue(key, v, p)}`);
+      const m = String(a['@model']);
+      push(old === undefined ? `${label} ${formatValue(key, v, p, m)}` : `${label} ${formatValue(key, old, p, m)} → ${formatValue(key, v, p, m)}`);
     }
   }
+  const bpm = after.data.tone.global?.['@tempo'], was = before.data.tone.global?.['@tempo'];
+  if (typeof bpm === 'number' && bpm !== was) changes.push({ block: 'Tempo', text: `${typeof was === 'number' ? `${was} → ` : ''}${bpm} BPM` });
   return changes;
 }

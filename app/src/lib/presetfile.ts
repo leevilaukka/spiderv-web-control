@@ -5,9 +5,9 @@
 //
 // Importing turns a file into a list of edits for the amp's edit buffer;
 // nothing is written to the amp's preset memory.
-import { type Block, type Bytes, type Preset, MsgType, SymbolTable, VType, parsePreset } from './protocol/codec';
+import { type Block, type Bytes, type Preset, MsgType, PresetKey, SymbolTable, VType, parsePreset } from './protocol/codec';
 import type { SpiderV } from './protocol/client';
-import { MICS, catalog, splitCab } from './tone';
+import { MICS, SYNC_PARAM, catalog, splitCab } from './tone';
 
 export type ToneGroup = Record<string, number | string | boolean>;
 export const TONE_EXTRAS_KEY = 'spiderv-web-control';
@@ -45,7 +45,8 @@ const ROOT = 'GuitarProc';
 export type ImportOp =
   | { kind: 'model'; obj: number; model: number; label: string }
   | { kind: 'param'; obj: number; ctrl: number; type: MsgType; value: number; label: string }
-  | { kind: 'tempo'; bpm: number; label: string };
+  | { kind: 'tempo'; bpm: number; label: string }
+  | { kind: 'presetKey'; key: number; type: MsgType; value: number; label: string };
 
 export type ImportPlan = {
   name: string;
@@ -101,6 +102,10 @@ export function planImport(file: ToneFile, st: SymbolTable, current?: Preset): I
   if (family && family !== 0x22) warnings.push(`This tone was made for another device (id 0x${file.data.device!.toString(16)}); some settings may not fit.`);
   if (root === undefined) throw new Error('The amp has no GuitarProc block.');
 
+  // Speaker mode is a preset setting; Line 6's catalog lists it under the
+  // cab, their files put it in "global".
+  let speaker: { value: number; label: string } | undefined;
+
   const currentModel = new Map((current?.tone?.children ?? []).map((b) => [b.id, b.model]));
   const kept = new Set<number>(); // blocks whose model stays, so their stored types apply
 
@@ -138,11 +143,16 @@ export function planImport(file: ToneFile, st: SymbolTable, current?: Preset): I
     const obj = st.id(def.block);
     if (!g || obj === undefined) continue;
     const model = models[group];
-    for (const [key, raw] of Object.entries(g)) {
+    // Tempo sync off is SyncSelect 0 on the amp; the file keeps the note.
+    const syncOff = '@temposync' in g && !g['@temposync'];
+    const entries = Object.entries(g);
+    if (syncOff && !(SYNC_PARAM in g) && catalog.models[model]?.params.some((p) => p.sym === SYNC_PARAM)) entries.push([SYNC_PARAM, 0]);
+    for (const [key, raw] of entries) {
       const label = `${group}.${key}`;
-      const value = num(raw);
+      const value = key === SYNC_PARAM && syncOff ? 0 : num(raw);
       switch (key) {
-        case '@model': case '@mic': continue;
+        case '@model': case '@mic': case '@temposync': continue;
+        case '@speakermode': speaker = { value, label }; continue;
         case '@enabled': rootParam(`${def.prefix}Enable`, value ? 1 : 0, MsgType.Bool, label); continue;
         case '@post': rootParam(`${def.postPrefix ?? def.prefix}Post`, value ? 1 : 0, MsgType.Bool, label); continue;
         case '@mix': rootParam(`${def.prefix}Mix`, value, MsgType.Float, label); continue;
@@ -164,7 +174,13 @@ export function planImport(file: ToneFile, st: SymbolTable, current?: Preset): I
 
   for (const [key, raw] of Object.entries(tone.global ?? {})) {
     if (key === '@tempo' && Number(raw) > 0) ops.push({ kind: 'tempo', bpm: Number(raw), label: 'global.@tempo' });
+    else if (key === '@speakermode' && !Number.isNaN(num(raw))) speaker = { value: num(raw), label: 'global.@speakermode' };
     else skipped.push(`global.${key}`);
+  }
+  // Spider V Remote writes 0 (Classic) or 1 (Full Range); amps without the
+  // setting (firmware before 2.00) refuse it, which lists it as failed.
+  if (speaker) {
+    ops.push({ kind: 'presetKey', key: PresetKey.SpeakerMode, type: MsgType.Bool, value: speaker.value >= 0.5 ? 1 : 0, label: speaker.label });
   }
   for (const group of Object.keys(tone)) if (!GROUPS[group] && group !== 'global') skipped.push(group);
 
@@ -185,6 +201,7 @@ export async function applyImport(amp: SpiderV, plan: ImportPlan, progress?: (do
     try {
       if (op.kind === 'model') await amp.loadModel(op.obj, op.model);
       else if (op.kind === 'param') await amp.setParam(op.obj, op.ctrl, { type: op.type, value: op.value });
+      else if (op.kind === 'presetKey') await amp.setPresetKey(op.key, { type: op.type, value: op.value });
       else await amp.setTempo(op.bpm);
     } catch {
       failed.push(op.label);
@@ -224,6 +241,14 @@ export function toToneFile(preset: Preset, st: SymbolTable, device?: number, fir
       // Skip state without a matching control (e.g. a bare "State" entry).
       const ctrl = n?.endsWith('State') ? n.slice(0, -5) : '';
       if (!ctrl || st.id(ctrl) === undefined) continue;
+      if (ctrl === SYNC_PARAM) {
+        // Spider Remote's form: a sync switch and a note (1..14) kept while off.
+        const v = p.value as number;
+        const def = Number(catalog.models[modelSym]?.params.find((x) => x.sym === SYNC_PARAM)?.def ?? 6);
+        g['@temposync'] = v > 0;
+        g[ctrl] = v > 0 ? v : def;
+        continue;
+      }
       g[ctrl] = p.type === VType.Float ? round(p.value as number) : (p.value as number);
     }
     const extras: [string, string][] = [
@@ -238,8 +263,12 @@ export function toToneFile(preset: Preset, st: SymbolTable, device?: number, fir
     }
     tone[group] = g;
   }
-  const tempo = preset.header[3];
-  if (typeof tempo === 'number' && tempo > 0) tone.global = { '@tempo': round(tempo) };
+  const global: ToneGroup = {};
+  const tempo = preset.header[PresetKey.Tempo];
+  if (typeof tempo === 'number' && tempo > 0) global['@tempo'] = round(tempo);
+  const speaker = preset.header[PresetKey.SpeakerMode];
+  if (typeof speaker === 'number') global['@speakermode'] = speaker ? 1 : 0;
+  if (Object.keys(global).length) tone.global = global;
 
   return {
     version: 5,

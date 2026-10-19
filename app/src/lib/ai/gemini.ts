@@ -18,6 +18,7 @@ export class GeminiConversation implements Conversation {
   constructor(private ai: GoogleGenAI, private model: string, system: string, tools: ToolSpec[]) {
     this.config = {
       systemInstruction: system,
+      thinkingConfig: { includeThoughts: true },
       tools: [{ functionDeclarations: tools.map((t) => ({ name: t.name, description: t.description, parametersJsonSchema: t.schema })) }],
     };
   }
@@ -48,7 +49,8 @@ export class GeminiConversation implements Conversation {
         if (content?.parts?.length) {
           output.push({ ...content, role: content.role ?? 'model' });
           for (const p of content.parts) {
-            if (p.text && !p.thought) opts.onText(p.text);
+            if (p.text && p.thought) opts.onThought?.(p.text);
+            else if (p.text) opts.onText(p.text);
             if (p.functionCall && !announced) { announced = true; opts.onToolCall(); }
           }
         }

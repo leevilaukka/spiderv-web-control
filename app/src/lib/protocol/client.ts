@@ -265,6 +265,17 @@ export class SpiderV {
   async setTempo(bpm: number) {
     await this.checked(Channel.Editor, EditorCmd.SetGlobalTempo, leF32(bpm), { text: `set tempo ${bpm}` });
   }
+
+  // Edit-buffer preset settings outside the tone blocks (PresetKey).
+  async getPresetKey(key: number): Promise<TypedValue> {
+    const r = await this.checked(Channel.Editor, EditorCmd.GetPresetPSKeyParam, le32(key), { text: `get preset key ${key}` });
+    return decodeTyped(r.body, 4);
+  }
+
+  async setPresetKey(key: number, v: TypedValue) {
+    await this.checked(Channel.Editor, EditorCmd.SetPresetPSKeyParam, [...le32(key), ...encodeTyped(v)],
+      { text: `set preset key ${key} = ${fmt(v.value)}${v.type === MsgType.Float ? '' : ` (${MsgType[v.type]})`}` });
+  }
 }
 
 const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(4));

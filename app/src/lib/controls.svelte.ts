@@ -1,4 +1,4 @@
-// App-wide performance controls: the channel switch, the stage view with its
+// App-wide performance controls: the channel switch, tap tempo, the stage view with its
 // memory and manual modes, and MIDI pedals (foot controllers and expression
 // pedals on any MIDI input other than the amp).
 import { amp } from './amp.svelte';
@@ -11,15 +11,20 @@ export const BANK_SIZE = 4;
 type Settings = {
   channelKey: string; // KeyboardEvent.code, '' for none
   channelCc: number | null;
+  tapKey: string;
+  tapCc: number | null;
   midi: boolean; // listen to MIDI pedals
   programChange: boolean; // program change messages select presets
 };
 
 function parse(v: Partial<Settings> | null): Settings {
-  const s: Settings = { channelKey: '', channelCc: null, midi: false, programChange: true };
+  const s: Settings = { channelKey: '', channelCc: null, tapKey: '', tapCc: null, midi: false, programChange: true };
   if (!v || typeof v !== 'object') return s;
+  const cc = (n: unknown) => (typeof n === 'number' && Number.isInteger(n) && n >= 0 && n < 128 ? n : null);
   if (typeof v.channelKey === 'string') s.channelKey = v.channelKey;
-  if (typeof v.channelCc === 'number' && Number.isInteger(v.channelCc) && v.channelCc >= 0 && v.channelCc < 128) s.channelCc = v.channelCc;
+  s.channelCc = cc(v.channelCc);
+  if (typeof v.tapKey === 'string') s.tapKey = v.tapKey;
+  s.tapCc = cc(v.tapCc);
   s.midi = !!v.midi;
   if (typeof v.programChange === 'boolean') s.programChange = v.programChange;
   return s;
@@ -54,6 +59,7 @@ class Controls {
   get taken(): Record<string, string> {
     return {
       ...(this.settings.channelKey ? { [this.settings.channelKey]: 'the channel switch' } : {}),
+      ...(this.settings.tapKey ? { [this.settings.tapKey]: 'tap tempo' } : {}),
       ...(this.memoryKeys ? { ArrowLeft: 'bank down', ArrowRight: 'bank up' } : {}),
     };
   }
@@ -133,6 +139,7 @@ class Controls {
     }
     const down = d2 >= 64;
     if (d1 === this.settings.channelCc && down) amp.switchChannel();
+    if (d1 === this.settings.tapCc && down) amp.tap();
     for (const s of shortcuts.list) {
       if (s.midi?.cc !== d1) continue;
       if (s.midi.expression) shortcuts.express(s, d2 / 127);

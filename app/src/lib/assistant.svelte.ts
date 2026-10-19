@@ -13,6 +13,7 @@ import { type Shortcut, GROUP_BLOCKS, mergeShortcutSpecs, toSpec } from './short
 import { shortcuts } from './shortcuts.svelte';
 import { controls } from './controls.svelte';
 import { completeGroups, pickGroups } from './channels';
+import { NOTES } from './tone';
 
 export const PROVIDERS: Provider[] = [anthropic, gemini];
 const MAX_TURNS = 6; // model calls per user message
@@ -36,6 +37,7 @@ type AssistantSettings = { provider: ProviderId; models: Record<ProviderId, stri
 export type ChatItem =
   | { kind: 'user'; text: string }
   | { kind: 'assistant'; text: string }
+  | { kind: 'thought'; text: string }
   | { kind: 'tone'; name: string; text: string; details: string[]; changes: Change[]; ok: boolean }
   | { kind: 'card'; title: string; text: string; lines: { key?: string; text: string }[]; details: string[]; ok: boolean }
   | { kind: 'error'; text: string };
@@ -143,8 +145,8 @@ Signal chain, in order: ${Object.keys(GROUPS).join(' → ')}. fx1, fx2, fx3 and 
 
 Values:
 - Knobs are 0..1 unless the catalog gives another range; the editor shows 0..1 as 0 to 10. Catalog entries list each setting with its default; a quoted name is the label the editor shows.
-- Every group takes "@enabled" (true/false). fx1, fx2, fx3 and reverb also take "@mix" (0..1) and "@post" (true = after the amp). volume takes "@post". amp takes "@volume", the channel volume (0..1). cab takes "@mic" (${MIC_NAMES}) and "Level", early reflections (0..1).
-- Delay times and modulation speeds are knob positions, not milliseconds or hertz. Tempo sync isn't available.
+- Every group takes "@enabled" (true/false). fx1, fx2, fx3 and reverb also take "@mix" (0..1) and "@post" (true = after the amp). volume takes "@post". amp takes "@volume", the channel volume (0..1); that is the one knob for overall loudness. The volume block is a pedal with only "MinVol", "MaxVol" and "@post", it has no level of its own. The preset's tempo is set with a "global" group: {"global": {"@tempo": 120}}, in BPM (30..240); include it only when they ask for a tempo or the tone needs one (synced delays and modulation follow it). cab takes "@mic" (${MIC_NAMES}) and "Level", early reflections (0..1).
+- Delay times and modulation speeds are knob positions, not milliseconds or hertz. Models marked [sync] can follow the preset's tempo instead (global "@tempo" in <current_tone>, which the guitarist sets by tapping): "@temposync": true with "SyncSelect", the note value. For delays SyncSelect is ${NOTES.map((n, i) => `${i + 1} ${n}`).join(', ')}; for modulations the order is reversed, so 1 is a whole note and 14 a 1/32. While synced, the Time, Speed or Freq knob has no effect; "@temposync": false goes back to the knob.
 - On the eq, a gain of 0.5 is flat.
 - Keep amp "@volume" near its current value unless they ask for a louder or quieter tone, since a jump in level through a speaker is unpleasant.
 
@@ -301,8 +303,16 @@ class Assistant {
   private reply(conversation: Conversation, turn: UserTurn, signal: AbortSignal) {
     this.status = 'Thinking…';
     let entry: { text: string } | null = null;
+    let thought: { text: string } | null = null;
     return conversation.send(turn, {
       signal,
+      onThought: (delta) => {
+        if (!thought) {
+          this.items.push({ kind: 'thought', text: '' });
+          thought = this.items[this.items.length - 1] as { text: string };
+        }
+        thought.text += delta;
+      },
       onText: (delta) => {
         if (!entry) {
           this.items.push({ kind: 'assistant', text: '' });

@@ -98,12 +98,12 @@ replies `-7` to a wrong one, and then every other command returns `-6`.
 | 10 | GetFbvConnectivityStatus | — | |
 | 11 | GetPersistentSysParam | key | status, type, value (key 9 = current preset index) |
 | 12 | SetPersistentSysParam | | |
-| 13 | SetPresetPSKeyParam | | |
-| 14 | GetPresetPSKeyParam | | |
+| 13 | SetPresetPSKeyParam | key, type, value | status (edit buffer) |
+| 14 | GetPresetPSKeyParam | key | status, type, value |
 | 15 | GetSystemSetting | | |
 | 16 | SetSystemSetting | | |
 
-Typed values in commands 09/0A/11 and in parameter-change messages are
+Typed values in commands 09/0A/11/13/14 and in parameter-change messages are
 `u32 type, 4 bytes value`, where type `2` = int, `3` = bool, `4` = f32.
 
 ### Librarian commands (channel 1)
@@ -127,6 +127,23 @@ and renames presets, and how it pushes whole tones into the edit buffer (index -
 The preset file is the same byte stream `GetPresetFile` returns after its status word.
 The app waits 300 ms after a write. With its `bool` argument set, the app's
 `SetPresetFile` sends command `0x0F` instead (used only for metadata updates).
+
+### Tempo and tempo sync
+
+Verified by ear on a Spider V 20 MkII (fw 2.0.1):
+
+- `SetGlobalTempo` (`0E`, f32 bpm) takes effect immediately and is stored as preset key `3`.
+- Delays and modulations sync through their `SyncSelect` int: `0` = off (the
+  `Time`/`Speed` knob applies), `1`–`14` = a note value of the tempo. Line 6's
+  app (`SliderRow`) shows, for delays, value `n` as entry `n-1` of
+  1/32, 1/16T, 1/16, 1/16., 1/8T, 1/8, 1/8., 1/4T, 1/4, 1/4., 1/2T, 1/2, 1/2., 1/1
+  (9 = quarter note: one repeat per second at 60 BPM). Modulations show the list reversed.
+  The amp accepts any value without an error.
+- The tone file's per-effect `@temposync` isn't an amp parameter: Spider Remote sends
+  `SyncSelect = 0` for false and the stored `SyncSelect` for true. Factory presets
+  are mostly synced (e.g. a tape echo at `12`), so their `Time` knob does nothing.
+- Tapping tempo on the amp changes preset key `3` and sends the usual "edit buffer
+  changed" event (kind `3`); no tap message arrives over USB.
 
 ### Events (amp → host)
 
@@ -175,8 +192,26 @@ Keys with the high bit set are structural:
 
 `PRSP` holds the preset metadata, written by `L6A36Preset::SerializeMetaData`:
 key `0` name and `75` label (strings, truncated to 63 bytes), `1`/`2` CustomTone
-tone id (`tnid`, low/high 32 bits), `3` tempo, `4`/`5` root block and flow model.
-Other tone-file metadata (author, band, song, style) isn't stored on the amp. `GTRT` holds the `GuitarProc` block
+tone id (`tnid`, low/high 32 bits), and the preset settings below.
+Other tone-file metadata (author, band, song, style) isn't stored on the amp.
+
+These keys are the preset "PS keys" that `Get`/`SetPresetPSKeyParam` read and write
+on the edit buffer. Their tone-file names (`global` group) come from `ParamIDToPSKey`
+in Line 6's app:
+
+| key | tone file | value |
+|---|---|---|
+| 3 | `@tempo` | f32 bpm |
+| 4 | `@tweakgroup` | ID of the tweak knob's block (`GuitarProc` for a mix) |
+| 5 | `@tweakparam` | ID of its control (e.g. `FX3Mix`) |
+| 7 / 8 | `@tweakmin` / `@tweakmax` | f32 |
+| 9 | `@pedal2assign` | bool |
+| 74 | `@speakermode` | bool: `0` Classic, `1` Full Range (firmware 2.00+) |
+
+Speaker mode is the cab's "Speaker" setting in Spider V Remote. Classic sends the
+guitar to the woofer only, voiced per amp model, and ignores the cabinet model.
+Every factory amp preset is Classic; the acoustic, bass and preamp presets are Full Range,
+which is also the default for new presets. Key 6 (f32, `0.8` in factory presets) isn't named. `GTRT` holds the `GuitarProc` block
 with its own parameters and one child block per slot.
 
 ## Tone files (JSON)

@@ -2,7 +2,7 @@
 // as the real amp, starting from a session recorded with
 // `bun tools/spiderv-cli.ts record`.
 import {
-  type Bytes, type Entry, Channel, EditorCmd, Kind, LibrarianCmd, MetaKey, MsgType, Reassembler, SymbolTable, SysParam, VType,
+  type Bytes, type Entry, Channel, EditorCmd, Kind, LibrarianCmd, MetaKey, MsgType, PresetKey, Reassembler, SymbolTable, SysParam, VType,
   crc32, decodeTyped, encodeMessage, encodeSysex, encodeTyped, i32, le32, parseEntries, parseSysex, renamePresetData,
   serializeEntries, u32,
 } from './codec';
@@ -115,8 +115,35 @@ export class MockTransport implements Transport {
         return i < 0 ? this.err(ch, -1) : this.ok(ch, [...le32(0), ...le32(this.entries[i + 1].value as number)]);
       }
       case EditorCmd.LoadDspModel: return this.loadModel(u32(body, 0), u32(body, 4)) ? this.ok(ch) : this.err(ch, -1);
+      case EditorCmd.SetGlobalTempo: {
+        const e = this.presetKey(PresetKey.Tempo);
+        if (e) e.value = decodeTyped([...le32(MsgType.Float), ...body], 0).value;
+        this.dirty = true;
+        return this.ok(ch);
+      }
+      case EditorCmd.GetPresetPSKeyParam: {
+        const e = this.presetKey(u32(body, 0));
+        if (!e) return this.err(ch, -1);
+        const type = e.type === VType.Float ? MsgType.Float : e.type === VType.Bool ? MsgType.Bool : MsgType.Int;
+        return this.ok(ch, [...le32(0), ...encodeTyped({ type, value: e.value as number })]);
+      }
+      case EditorCmd.SetPresetPSKeyParam: {
+        const e = this.presetKey(u32(body, 0));
+        if (!e) return this.err(ch, -1);
+        const v = decodeTyped(body, 4).value;
+        e.value = e.type === VType.Float ? v : Math.round(v);
+        this.dirty = true;
+        return this.ok(ch);
+      }
       default: return this.ok(ch);
     }
+  }
+
+  // A number-valued entry of the edit buffer's metadata (PRSP) section.
+  private presetKey(key: number): Entry | undefined {
+    const end = this.entries.findIndex((e) => e.key === MetaKey.SectionEnd);
+    return this.entries.slice(0, end < 0 ? undefined : end)
+      .find((e) => e.key === key && (e.type === VType.Bool || e.type === VType.Int || e.type === VType.Float));
   }
 
   private slotName(i: number): string {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Footswitch-style buttons for the channel switch and the preset's
+  // Footswitch-style buttons for tap tempo, the channel switch and the preset's
   // shortcuts. `big` is the stage view's copy, which leaves keys and editing
   // to the one on the main page.
   import { amp } from '../amp.svelte';
@@ -10,6 +10,7 @@
   import { groupColor } from '../colors';
   import ShortcutDialog from './ShortcutDialog.svelte';
   import Channels from './Channels.svelte';
+  import Tempo from './Tempo.svelte';
   import { controls } from '../controls.svelte';
 
   let { big = false }: { big?: boolean } = $props();
@@ -56,6 +57,7 @@
 <svelte:window {onkeydown} {onkeyup} onblur={() => shortcuts.releaseAll()} />
 
 <section class="shortcuts" class:big aria-label="Shortcuts">
+  <Tempo {big} />
   <Channels {big} />
   {#each shortcuts.list as s (s.id)}
     {@const engaged = shortcuts.engaged(s)}

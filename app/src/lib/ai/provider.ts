@@ -19,6 +19,8 @@ export type Reply = {
 export type ReplyOptions = {
   signal: AbortSignal;
   onText: (delta: string) => void;
+  // Thought summaries, for providers that return them.
+  onThought?: (delta: string) => void;
   onToolCall: () => void;
 };
 

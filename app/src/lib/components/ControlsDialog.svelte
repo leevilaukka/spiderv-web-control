@@ -1,5 +1,5 @@
 <script lang="ts">
-  // App-wide controls: the channel switch and MIDI pedals.
+  // App-wide controls: the channel switch, tap tempo and MIDI pedals.
   import { controls } from '../controls.svelte';
   import { shortcuts } from '../shortcuts.svelte';
   import { amp } from '../amp.svelte';
@@ -8,50 +8,63 @@
   import Switch from './Switch.svelte';
 
   let dialog: HTMLDialogElement | undefined = $state();
-  let listening = $state(false);
-  let keyError = $state('');
+  type Which = 'channel' | 'tap';
+  const KEY = { channel: 'channelKey', tap: 'tapKey' } as const;
+  const CC = { channel: 'channelCc', tap: 'tapCc' } as const;
+  // The control whose key or footswitch is being captured.
+  let listening = $state<Which | null>(null);
+  let learning = $state<Which | null>(null);
+  let keyError = $state<{ which: Which; text: string } | null>(null);
 
   $effect(() => {
     if (!dialog) return;
     if (controls.dialogOpen && !dialog.open) {
-      listening = false;
-      keyError = '';
+      listening = null;
+      keyError = null;
       dialog.showModal();
     } else if (!controls.dialogOpen && dialog.open) {
       dialog.close();
     }
   });
 
-  function captureKey(e: KeyboardEvent) {
-    if (!listening || e.key === 'Tab') return;
+  function captureKey(e: KeyboardEvent, which: Which) {
+    if (listening !== which || e.key === 'Tab') return;
     e.preventDefault();
     e.stopPropagation();
-    if (e.code === 'Escape') { listening = false; keyError = ''; return; }
-    if (e.code === 'Backspace' || e.code === 'Delete') { controls.update({ channelKey: '' }); listening = false; return; }
+    if (e.code === 'Escape') { listening = null; keyError = null; return; }
+    if (e.code === 'Backspace' || e.code === 'Delete') { controls.update({ [KEY[which]]: '' }); listening = null; return; }
     if (/^(Shift|Control|Alt|Meta|OS)/.test(e.code)) return;
-    const c = keyConflict(e.code, shortcuts.list, undefined, { ArrowLeft: 'bank down in the stage view', ArrowRight: 'bank up in the stage view' });
+    const other: Which = which === 'channel' ? 'tap' : 'channel';
+    const c = keyConflict(e.code, shortcuts.list, undefined, {
+      ArrowLeft: 'bank down in the stage view', ArrowRight: 'bank up in the stage view',
+      ...(controls.settings[KEY[other]] ? { [controls.settings[KEY[other]]]: other === 'tap' ? 'tap tempo' : 'the channel switch' } : {}),
+    });
+    const fail = (text: string) => (keyError = { which, text });
     if (!c) {
-      controls.update({ channelKey: e.code });
-      listening = false;
-      keyError = '';
+      controls.update({ [KEY[which]]: e.code });
+      listening = null;
+      keyError = null;
     } else if ('block' in c) {
-      keyError = `${keyLabel(e.code)} already switches ${amp.chain.find((s) => s.sym === c.block)?.label ?? c.block}.`;
+      fail(`${keyLabel(e.code)} already switches ${amp.chain.find((s) => s.sym === c.block)?.label ?? c.block}.`);
     } else if ('shortcut' in c) {
-      keyError = `${keyLabel(e.code)} is used by the shortcut “${c.shortcut.name}” in this preset.`;
+      fail(`${keyLabel(e.code)} is used by the shortcut “${c.shortcut.name}” in this preset.`);
     } else if ('control' in c) {
-      keyError = `${keyLabel(e.code)} is ${c.control}.`;
+      fail(`${keyLabel(e.code)} is ${c.control}.`);
     } else {
-      keyError = `${keyLabel(e.code)} can't be used. Try a letter, F-key or Page Up/Down.`;
+      fail(`${keyLabel(e.code)} can't be used. Try a letter, F-key or Page Up/Down.`);
     }
   }
 
-  function learnChannel() {
-    if (controls.learning) return controls.stopLearning();
-    controls.learn((cc) => controls.update({ channelCc: cc }));
+  function learn(which: Which) {
+    controls.stopLearning();
+    if (learning === which) { learning = null; return; }
+    learning = which;
+    controls.learn((cc) => { learning = null; controls.update({ [CC[which]]: cc }); });
   }
 
   function close() {
     controls.stopLearning();
+    learning = null;
     controls.dialogOpen = false;
   }
 </script>
@@ -60,24 +73,45 @@
   <div class="body">
     <h2 id="controls-title">Controls and MIDI pedals</h2>
 
+    {#snippet assign(which: Which)}
+      {@const key = controls.settings[KEY[which]]}
+      {@const cc = controls.settings[CC[which]]}
+      <div class="row">
+        <span class="label">Key</span>
+        <button
+          class="capture"
+          class:listening={listening === which}
+          onclick={() => { listening = listening === which ? null : which; keyError = null; }}
+          onkeydown={(e) => captureKey(e, which)}
+          onblur={() => { if (listening === which) listening = null; }}
+        >
+          {#if listening === which}Press a key…{:else if key}<kbd>{keyLabel(key)}</kbd>{:else}None{/if}
+        </button>
+        {#if key && listening !== which}<button class="small" onclick={() => controls.update({ [KEY[which]]: '' })}>Clear</button>{/if}
+      </div>
+      {#if keyError?.which === which}<p class="error" role="alert">{keyError.text}</p>{/if}
+      <div class="row">
+        <span class="label">MIDI</span>
+        <button class="capture" class:listening={learning === which} disabled={!controls.settings.midi} onclick={() => learn(which)}>
+          {#if learning === which}Press the footswitch…{:else if cc !== null}CC {cc}{:else}None{/if}
+        </button>
+        {#if cc !== null && learning !== which}<button class="small" onclick={() => controls.update({ [CC[which]]: null })}>Clear</button>{/if}
+      </div>
+    {/snippet}
+
     <section>
       <h3>Channel switch</h3>
       <p>Switches between channels A and B in presets that have them.</p>
-      <div class="row">
-        <span class="label">Key</span>
-        <button class="capture" class:listening onclick={() => { listening = !listening; keyError = ''; }} onkeydown={captureKey} onblur={() => (listening = false)}>
-          {#if listening}Press a key…{:else if controls.settings.channelKey}<kbd>{keyLabel(controls.settings.channelKey)}</kbd>{:else}None{/if}
-        </button>
-        {#if controls.settings.channelKey && !listening}<button class="small" onclick={() => controls.update({ channelKey: '' })}>Clear</button>{/if}
-      </div>
-      {#if keyError}<p class="error" role="alert">{keyError}</p>{/if}
-      <div class="row">
-        <span class="label">MIDI</span>
-        <button class="capture" class:listening={controls.learning} disabled={!controls.settings.midi} onclick={learnChannel}>
-          {#if controls.learning}Press the footswitch…{:else if controls.settings.channelCc !== null}CC {controls.settings.channelCc}{:else}None{/if}
-        </button>
-        {#if controls.settings.channelCc !== null && !controls.learning}<button class="small" onclick={() => controls.update({ channelCc: null })}>Clear</button>{/if}
-      </div>
+      {@render assign('channel')}
+    </section>
+
+    <section>
+      <h3>Tap tempo</h3>
+      <p>
+        Sets the preset's tempo from the last few taps, like a GX-100's CTL switch set to tap. Delays and modulations
+        with tempo sync on follow it. Tapping on the amp itself works too.
+      </p>
+      {@render assign('tap')}
     </section>
 
     <section>

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { amp } from '../amp.svelte';
-  import { type Control, type Slot, MICS, modelChoices } from '../tone';
+  import { type Control, type Slot, MICS, modelChoices, noteChoices } from '../tone';
   import { MsgType } from '../protocol/codec';
   import { groupColor } from '../colors';
   import Knob from './Knob.svelte';
@@ -23,11 +23,16 @@
     slot.sym === 'Amp' ? 'Output' : slot.sym === 'StudioCab' ? 'Room' : slot.sym === 'VolumePedal' ? 'Routing' : 'Mix & routing',
   );
   const byType = (cs: Control[], t: MsgType) => cs.filter((c) => c.type === t);
+  const synced = $derived(!!slot.sync && slot.sync.c.value > 0);
+  // The knob that tempo sync replaces while it is on.
+  const follows = (c: Control) => synced && c.sym === slot.sync?.synced;
 </script>
 
 {#snippet controls(list: Control[], withDefaults: boolean)}
   {#each byType(list, MsgType.Float) as c (c.key)}
-    <Knob value={c.value} min={c.min} max={c.max} def={withDefaults ? c.def : undefined} label={c.label} unit={c.unit} {color} onchange={(v) => amp.set(c, v)} />
+    <div class="knob" class:follows={follows(c)} title={follows(c) ? `Tempo sync sets the ${c.label.toLowerCase()} while it is on` : undefined}>
+      <Knob value={c.value} min={c.min} max={c.max} def={withDefaults ? c.def : undefined} label={c.label} unit={c.unit} {color} onchange={(v) => amp.set(c, v)} />
+    </div>
   {/each}
   {#each byType(list, MsgType.Int) as c (c.key)}
     <Stepper value={c.value} min={c.min} max={c.max} label={c.label === 'Note' ? 'Note (tempo sync)' : c.label} onchange={(v) => amp.set(c, v)} />
@@ -55,6 +60,15 @@
     </div>
 
     <div class="pickers">
+      {#if cab && amp.speakerFullRange !== null}
+        <label class="field">
+          <span>Speaker</span>
+          <select class="short" value={amp.speakerFullRange ? 'full' : 'classic'} onchange={(e) => amp.setSpeakerMode(e.currentTarget.value === 'full')}>
+            <option value="classic">Classic</option>
+            <option value="full">Full Range</option>
+          </select>
+        </label>
+      {/if}
       {#if noList}
         <label class="field">
           <span>{slot.list === 'cab' ? 'Cabinet' : 'Model'}</span>
@@ -103,14 +117,36 @@
     </div>
   </header>
 
+  {#if cab && amp.speakerFullRange === false}
+    <p class="note">Classic speaker mode plays through the woofer only, voiced for this amp, and ignores the cabinet and mic. Choose Full Range to hear them.</p>
+  {/if}
+
   {#if slot.params.length}
     <div class="controls">{@render controls(slot.params, true)}</div>
-  {:else if !slot.extras.length}
+  {:else if !slot.extras.length && !slot.sync}
     <p class="empty">This block has no adjustable settings.</p>
   {/if}
 
+  {#if slot.sync}
+    {@const sync = slot.sync}
+    <div class="sync">
+      <Switch checked={synced} label="Tempo sync" onchange={(v) => amp.setSync(slot, v)} />
+      <select
+        aria-label="Note value"
+        disabled={!synced}
+        value={synced ? sync.c.value : sync.note}
+        onchange={(e) => amp.setNote(slot, Number(e.currentTarget.value))}
+      >
+        {#each noteChoices(slot.group) as n (n.value)}
+          <option value={n.value}>{n.label}</option>
+        {/each}
+      </select>
+      {#if synced && amp.tempo !== null}<span class="at">at {amp.tempo} BPM</span>{/if}
+    </div>
+  {/if}
+
   {#if slot.extras.length}
-    <div class="group" class:alone={!slot.params.length}>
+    <div class="group" class:alone={!slot.params.length && !slot.sync}>
       <h3>{extrasTitle}</h3>
       <div class="controls">{@render controls(slot.extras, false)}</div>
     </div>
@@ -195,6 +231,7 @@
     width: 240px;
     max-width: 100%;
   }
+  select.short { width: 140px; }
   select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   select:disabled { opacity: 0.7; }
   .catalog {
@@ -217,6 +254,17 @@
     gap: 16px 10px;
     transition: opacity 0.15s;
   }
+  .knob { transition: opacity 0.15s; }
+  .knob.follows { opacity: 0.4; }
+  .sync {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px 14px;
+    margin-top: 16px;
+  }
+  .sync select { width: 150px; }
+  .at { font-size: 13px; color: var(--muted); }
   .switch {
     display: flex;
     align-items: center;
@@ -245,6 +293,11 @@
     color: var(--muted);
     font-size: 13px;
     margin: 0;
+  }
+  .note {
+    color: var(--muted);
+    font-size: 13px;
+    margin: -8px 0 18px;
   }
   @media (max-width: 760px) {
     .editor { padding: 16px; }

@@ -60,7 +60,32 @@ export type Slot = {
   params: Control[];
   extras: Control[]; // mix, pre/post, channel volume, early reflections...
   mic?: number;
+  // Tempo sync of delays and modulations (SyncSelect): 0 = off, else a note
+  // value (NOTES). `synced` is the knob it replaces while on (Time, Speed or
+  // Freq), and `note` the value to turn sync back on with.
+  sync?: { c: Control; synced?: string; note: number };
 };
+
+// Tempo-sync note values, SyncSelect 1..14, in the order Line 6's app shows
+// them for delays; for modulations it reverses them, so 1 is a whole note.
+export const NOTES = [
+  '1/32', '1/16 triplet', '1/16', '1/16 dotted', '1/8 triplet', '1/8', '1/8 dotted',
+  '1/4 triplet', '1/4', '1/4 dotted', '1/2 triplet', '1/2', '1/2 dotted', '1/1',
+];
+export const SYNC_PARAM = 'SyncSelect';
+const DEFAULT_NOTE = 6;
+
+// Note values for a block, shortest first: SyncSelect value and label.
+export function noteChoices(group: string): { value: number; label: string }[] {
+  const values = NOTES.map((_, i) => i + 1);
+  return (group === 'mod' ? values.reverse() : values).map((value) => ({ value, label: noteName(value, group) }));
+}
+
+export const noteName = (value: number, group: string) =>
+  NOTES[group === 'mod' ? NOTES.length - value : value - 1] ?? String(value);
+
+export const MIN_TEMPO = 30, MAX_TEMPO = 240;
+export const clampTempo = (bpm: number) => Math.round(Math.min(MAX_TEMPO, Math.max(MIN_TEMPO, bpm)) * 10) / 10;
 
 // The editor shows 0..1 knobs as 0 to 10.
 export const displayScale = (c: { min: number; max: number }) => (c.min === 0 && c.max === 1 ? 10 : 1);
@@ -181,11 +206,21 @@ export function buildChain(preset: Preset, st: SymbolTable): Slot[] {
       }
     }
 
+    // The note picker replaces the bare SyncSelect number.
+    let sync: Slot['sync'];
+    const si = params.findIndex((c) => c.sym === SYNC_PARAM && c.type === MsgType.Int);
+    if (si >= 0) {
+      const [c] = params.splice(si, 1);
+      const first = params[0]?.sym;
+      const note = c.value >= 1 && c.value <= NOTES.length ? c.value : c.def && c.def >= 1 ? c.def : DEFAULT_NOTE;
+      sync = { c, synced: first && /^(Time|Speed|Freq)$/.test(first) ? first : undefined, note };
+    }
+
     slots.push({
       sym: def.sym, label: def.label, id: blk.id, model: blk.model, modelSym,
       modelName: modelName(modelSym), shortName: shortModelName(modelSym), group: cat?.group ?? def.group ?? 'fixed', list: def.list,
       enable: def.enable ? rootControl(def.enable, 'On', `${tone.id}:${def.enable}`) : undefined,
-      params, extras, mic,
+      params, extras, mic, sync,
     });
   }
   return slots;

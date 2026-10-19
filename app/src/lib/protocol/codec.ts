@@ -35,8 +35,8 @@ export const EditorCmd = {
   GetFbvConnectivityStatus: 0x10,
   GetPersistentSysParam: 0x11, // body: key -> status, vtype, value
   SetPersistentSysParam: 0x12,
-  SetPresetPSKeyParam: 0x13,
-  GetPresetPSKeyParam: 0x14,
+  SetPresetPSKeyParam: 0x13,   // body: PresetKey, vtype, value (edit buffer)
+  GetPresetPSKeyParam: 0x14,   // body: PresetKey -> status, vtype, value
   GetSystemSetting: 0x15,
   SetSystemSetting: 0x16,
 } as const;
@@ -317,8 +317,20 @@ export function serializeEntries(entries: Entry[]): Bytes {
 // Spider Remote truncates names (and labels) to 63 bytes before saving.
 export const PRESET_NAME_MAX = 63;
 
-// Preset metadata stored on the amp (PRSP section of a preset file).
-export const PresetKey = { Name: 0, ToneIdLow: 1, ToneIdHigh: 2, Tempo: 3, Label: 75 } as const;
+// Preset metadata stored on the amp (PRSP section of a preset file). The
+// same keys address Get/SetPresetPSKeyParam; the tone-file "global" names
+// are from ParamIDToPSKey in Line 6's app.
+export const PresetKey = {
+  Name: 0, ToneIdLow: 1, ToneIdHigh: 2,
+  Tempo: 3,        // @tempo
+  TweakGroup: 4,   // @tweakgroup (block ID)
+  TweakParam: 5,   // @tweakparam (control ID)
+  TweakMin: 7,     // @tweakmin
+  TweakMax: 8,     // @tweakmax
+  Pedal2Assign: 9, // @pedal2assign
+  SpeakerMode: 74, // @speakermode: bool, false = Classic, true = Full Range (firmware 2.00+)
+  Label: 75,
+} as const;
 
 export type PresetMeta = { name?: string; label?: string; tnid?: number };
 

@@ -1,11 +1,12 @@
 // Application state: one connected amp, its presets and the current tone.
 import { SpiderV, type LogEntry, type Transport } from './protocol/client';
-import { type Bytes, type ParamChange, MsgType, i32, le32 } from './protocol/codec';
+import { type Bytes, type ParamChange, MsgType, PresetKey, i32, le32 } from './protocol/codec';
 import { WebMidiTransport } from './protocol/webmidi';
 import { Hub } from './protocol/hub';
 import { RemoteTransport } from './protocol/remote';
 import { catalogStore } from './catalog.svelte';
-import { type Control, type Slot, MICS, buildChain, splitCab } from './tone';
+import { type Control, type Slot, MICS, NOTES, buildChain, clampTempo, splitCab } from './tone';
+import { TapTempo } from './tap';
 import { type ToneFile, TONE_EXTRAS_KEY, applyImport, planImport, readToneFile, toToneFile } from './presetfile';
 import type { Shortcut } from './shortcuts';
 import { type Channels, type PresetExtras, otherChannel, parsePresetExtras, pickGroups, readExtras, switchTone } from './channels';
@@ -53,6 +54,11 @@ export class Amp {
   dirty = $state(false);
   presetName = $state('');
   chain = $state<Slot[]>([]);
+  // The preset's speaker mode (true = Full Range, false = Classic); null on
+  // firmware before 2.00, which has no such setting.
+  speakerFullRange = $state<boolean | null>(null);
+  // The preset's tempo, which synced delays and modulations follow.
+  tempo = $state<number | null>(null);
   selected = $state('Amp');
   log = $state<LogEntry[]>([]);
   loadingPreset = $state(false);
@@ -89,6 +95,11 @@ export class Amp {
   private pumping = false;
   private lastLocalEdit = 0;
   private resyncTimer: ReturnType<typeof setTimeout> | null = null;
+  private tapper = new TapTempo();
+  private tempoPending: number | null = null;
+  private tempoSending = false;
+  // Note values of synced blocks switched off this session, to switch back on with.
+  private syncNotes = new Map<string, number>();
 
   get demo() { return this.label.startsWith('Demo'); }
 
@@ -177,6 +188,8 @@ export class Amp {
     this.status = msg ? 'error' : 'idle';
     this.error = msg;
     this.chain = [];
+    this.speakerFullRange = null;
+    this.tempo = null;
     this.presets = [];
     this.shortcuts = [];
     this.channels = null;
@@ -205,6 +218,10 @@ export class Amp {
     const p = await c.readPreset();
     this.presetName = p.name;
     this.chain = buildChain(p, c.symbols!);
+    const speaker = p.header[PresetKey.SpeakerMode];
+    this.speakerFullRange = typeof speaker === 'number' ? !!speaker : null;
+    const tempo = p.header[PresetKey.Tempo];
+    if (!this.tempoSending) this.tempo = typeof tempo === 'number' && tempo > 0 ? Math.round(tempo * 10) / 10 : null;
     this.dirty = await c.isDirty();
   }
 
@@ -291,6 +308,72 @@ export class Amp {
   }
 
   cabOf(slot: Slot) { return splitCab(slot.modelSym); }
+
+  // ------------------------------------------------------------ tempo
+
+  // Sends are coalesced, so dragging or fast tapping never queues up.
+  async setTempo(bpm: number) {
+    if (!this.client || this.tempo === null || !Number.isFinite(bpm)) return;
+    bpm = clampTempo(bpm);
+    this.lastLocalEdit = Date.now();
+    this.tempo = bpm;
+    this.dirty = true;
+    this.tempoPending = bpm;
+    if (this.tempoSending) return;
+    this.tempoSending = true;
+    try {
+      while (this.tempoPending !== null && this.client) {
+        const v = this.tempoPending;
+        this.tempoPending = null;
+        await this.client.setTempo(v).catch((e) => this.report(e));
+      }
+    } finally {
+      this.tempoSending = false;
+    }
+  }
+
+  // One tap of the tap-tempo switch; from the second tap on it sets the tempo.
+  tap(now = performance.now()) {
+    const bpm = this.tapper.tap(now);
+    if (bpm !== null) this.setTempo(bpm);
+  }
+
+  get tapCount() { return this.tapper.count; }
+
+  // Tempo sync on or off for a delay or modulation: off is SyncSelect 0.
+  setSync(slot: Slot, on: boolean) {
+    const s = slot.sync;
+    if (!s || on === s.c.value > 0) return;
+    const key = `${slot.sym}:${slot.model}`;
+    if (on) this.set(s.c, this.syncNotes.get(key) ?? s.note);
+    else {
+      this.syncNotes.set(key, s.c.value);
+      this.set(s.c, 0);
+    }
+  }
+
+  setNote(slot: Slot, value: number) {
+    if (slot.sync && value >= 1 && value <= NOTES.length) {
+      slot.sync.note = value;
+      this.set(slot.sync.c, value);
+    }
+  }
+
+  // Classic sends the guitar to the woofer only, voiced for this amp, and
+  // ignores the cabinet model; Full Range uses the cabinet and mic models.
+  async setSpeakerMode(fullRange: boolean) {
+    if (!this.client || this.speakerFullRange === null || fullRange === this.speakerFullRange) return;
+    const before = this.speakerFullRange;
+    this.lastLocalEdit = Date.now();
+    this.speakerFullRange = fullRange;
+    this.dirty = true;
+    try {
+      await this.client.setPresetKey(PresetKey.SpeakerMode, { type: MsgType.Bool, value: fullRange ? 1 : 0 });
+    } catch (e) {
+      this.speakerFullRange = before;
+      this.report(e);
+    }
+  }
 
   // The amp sends an "edit buffer changed" event after edits, including
   // ones made with its own knobs. Re-read the tone then, unless the change
