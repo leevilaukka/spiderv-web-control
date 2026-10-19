@@ -1,12 +1,15 @@
-// App-wide performance controls: the channel switch, tap tempo, the stage view with its
-// memory and manual modes, and MIDI pedals (foot controllers and expression
-// pedals on any MIDI input other than the amp).
+// App-wide performance controls: the channel switch, tap tempo, banks for
+// the play view, and MIDI pedals (foot controllers and expression pedals on
+// any MIDI input other than the amp).
 import { amp } from './amp.svelte';
 import { shortcuts } from './shortcuts.svelte';
+import { ui } from './ui.svelte';
 
 const STORAGE_KEY = 'spiderv.controls';
 const AMP_PORT = /spider ?v/i;
 export const BANK_SIZE = 4;
+// A preset's place as the amp shows it: bank number and letter, like 3B.
+export const slotName = (i: number) => `${Math.floor(i / BANK_SIZE) + 1}${'ABCD'[i % BANK_SIZE]}`;
 
 type Settings = {
   channelKey: string; // KeyboardEvent.code, '' for none
@@ -37,10 +40,6 @@ function load(): Settings {
 class Controls {
   settings = $state<Settings>(load());
   dialogOpen = $state(false);
-  stage = $state(false);
-  // Memory: keys 1-4 pick a preset in the bank, arrows change banks.
-  // Manual: the number keys switch blocks, as outside the stage view.
-  mode = $state<'memory' | 'manual'>('memory');
   midiInputs = $state<string[]>([]);
   midiError = $state('');
   lastMidi = $state('');
@@ -53,7 +52,9 @@ class Controls {
     if (this.settings.midi) this.startMidi();
   }
 
-  get memoryKeys() { return this.stage && this.mode === 'memory'; }
+  // In the play view keys 1-4 pick a preset in the bank and the arrows
+  // change banks, like a GX-100's memory mode.
+  get memoryKeys() { return ui.playing; }
 
   // Keys of app-wide controls, for conflict checks.
   get taken(): Record<string, string> {

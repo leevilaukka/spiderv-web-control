@@ -4,17 +4,24 @@
   import Shortcuts from './lib/components/Shortcuts.svelte';
   import SlotEditor from './lib/components/SlotEditor.svelte';
   import PresetList from './lib/components/PresetList.svelte';
-  import Console from './lib/components/Console.svelte';
   import AudioMonitor from './lib/components/AudioMonitor.svelte';
   import PresetActions from './lib/components/PresetActions.svelte';
   import DeviceMenu from './lib/components/DeviceMenu.svelte';
+  import AmpMenuItems, { disconnect } from './lib/components/AmpMenuItems.svelte';
+  import AmpStatus from './lib/components/AmpStatus.svelte';
   import Notice from './lib/components/Notice.svelte';
   import Assistant from './lib/components/Assistant.svelte';
-  import Stage from './lib/components/Stage.svelte';
+  import PlayView from './lib/components/PlayView.svelte';
   import CatalogDialog from './lib/components/CatalogDialog.svelte';
+  import ConsoleDialog from './lib/components/ConsoleDialog.svelte';
+  import ControlsDialog from './lib/components/ControlsDialog.svelte';
+  import SaveDialog from './lib/components/SaveDialog.svelte';
+  import ShareDialog from './lib/components/ShareDialog.svelte';
+  import ShortcutDialog from './lib/components/ShortcutDialog.svelte';
   import UpdateBanner from './lib/components/UpdateBanner.svelte';
-  import { controls } from './lib/controls.svelte';
   import { assistant } from './lib/assistant.svelte';
+  import { slotName } from './lib/controls.svelte';
+  import { type Tab, ui } from './lib/ui.svelte';
   import { WebMidiTransport } from 'spiderv-protocol/webmidi';
   import { normalizeCode, relayAvailable, remote } from './lib/remote.svelte';
   import { importFile } from './lib/settings.svelte';
@@ -22,10 +29,6 @@
 
   const midi = WebMidiTransport.supported();
   const slot = $derived(amp.chain.find((s) => s.sym === amp.selected) ?? amp.chain[0]);
-  let consoleOpen = $state(false);
-  // On phones the preset list starts collapsed so the controls come first.
-  const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 760px)').matches;
-  let presetsOpen = $state(!narrow);
   let dragging = $state(false);
 
   function drop(e: DragEvent) {
@@ -34,6 +37,31 @@
     const file = e.dataTransfer?.files[0];
     if (file) importFile(file);
   }
+
+  // The preset on the amp, and whether its edits are saved.
+  const name = $derived(amp.imported ? amp.imported.name : amp.presetName);
+  const unsaved = $derived(amp.dirty || amp.channelsEdited || !!amp.imported);
+  const status = $derived(
+    amp.imported ? `${amp.imported.file ? 'Imported from file' : 'Made by the tone assistant'} · not saved`
+      : unsaved ? 'Edited · not saved' : 'Saved preset',
+  );
+  const busy = $derived(!!amp.importing || amp.saving);
+
+  function step(d: number) {
+    const n = amp.presets.length;
+    if (!n) return;
+    amp.selectPreset(amp.current < 0 ? 0 : (amp.current + d + n) % n);
+  }
+
+  const TABS: [Tab, string][] = [['tone', 'Tone'], ['presets', 'Presets'], ['play', 'Play'], ['assist', 'Assist'], ['more', 'More']];
+
+  // On phones the assistant is a tab, wherever it is opened from.
+  $effect(() => {
+    if (ui.narrow && assistant.open) {
+      ui.tab = 'assist';
+      assistant.open = false;
+    }
+  });
 
   const params = new URLSearchParams(location.search);
   // Opened from the QR code of a computer sharing its amp: be its remote.
@@ -122,35 +150,42 @@
       {/if}
     </div>
   </main>
-{:else}
+{:else if !ui.narrow}
   <div class="app">
     <header class="top">
-      <div class="brand">Spider V <span>Control</span></div>
+      <div class="brand">
+        <img src="./favicon.svg" alt="" width="26" height="26" />
+        <span class="brand-name">Spider V <span>Control</span></span>
+      </div>
+      <button class="icon" aria-label="Previous preset" disabled={amp.loadingPreset} onclick={() => step(-1)}>‹</button>
       <div class="now">
         <span class="num">{amp.current >= 0 ? amp.current + 1 : '–'}</span>
         <div class="title">
-          <strong>{amp.imported ? amp.imported.name : amp.presetName}</strong>
-          <span class="state">
-            {#if amp.imported}{amp.imported.file ? 'Imported from file' : 'Made by the tone assistant'}, not saved{:else if amp.dirty || amp.channelsEdited}Edited, not saved{:else}Saved preset{/if}
-          </span>
+          <strong>{name}</strong>
+          <span class="state"><span class="dot" class:unsaved aria-hidden="true"></span>{status}</span>
         </div>
-        <PresetActions />
+        {#if amp.current >= 0}<span class="place">{slotName(amp.current)}</span>{/if}
       </div>
-      <div class="right">
-        <button class="assist" onclick={() => (controls.stage = true)} title="Big footswitch view for playing">Stage</button>
-        <button class="assist" aria-expanded={assistant.open} onclick={() => (assistant.open = !assistant.open)}>
-          <span aria-hidden="true">✦</span> Tone assistant
-        </button>
-        {#if !amp.remoteCode}<AudioMonitor />{/if}
-        <DeviceMenu />
+      <button class="icon" aria-label="Next preset" disabled={amp.loadingPreset} onclick={() => step(1)}>›</button>
+      <span class="spacer"></span>
+      <div class="modes" role="radiogroup" aria-label="View">
+        <button role="radio" aria-checked={ui.mode === 'edit'} onclick={() => (ui.mode = 'edit')}>Edit</button>
+        <button role="radio" aria-checked={ui.mode === 'play'} title="Big switches for playing: keys 1–4 pick presets" onclick={() => (ui.mode = 'play')}>Play</button>
       </div>
+      {#if !amp.remoteCode}<AudioMonitor />{/if}
+      <button class="assist" aria-expanded={assistant.open} aria-label="Tone assistant" onclick={() => (assistant.open = !assistant.open)}>
+        <span class="spark" aria-hidden="true">✦</span><span class="assist-label"> Assistant</span>
+      </button>
+      <span class="amp"><AmpStatus /></span>
+      <button class="save" class:clean={!unsaved} disabled={busy} onclick={() => (amp.saveDialogOpen = true)}>
+        {amp.saving ? 'Saving…' : 'Save'}
+      </button>
+      <DeviceMenu />
     </header>
 
-    <aside class="side" class:collapsed={!presetsOpen}>
-      <button class="side-toggle" aria-expanded={presetsOpen} onclick={() => (presetsOpen = !presetsOpen)}>
-        {presetsOpen ? '▾' : '▸'} Presets
-      </button>
+    <aside class="side">
       <PresetList />
+      <PresetActions />
     </aside>
 
     <main
@@ -161,29 +196,76 @@
       ondrop={drop}
     >
       <Notice />
-      <Chain />
-      <Shortcuts />
-      {#if slot}
-        <SlotEditor {slot} />
+      {#if ui.mode === 'play'}
+        <PlayView />
+      {:else}
+        <Chain />
+        {#if slot}<SlotEditor {slot} />{/if}
       {/if}
-      <p class="hint">
-        Changes reach the amp instantly; Save stores them in a preset. The key on each block toggles it, like a footswitch;
-        shortcuts switch blocks and knobs at once and, like channels A/B, belong to the preset (kept in this browser).
-      </p>
     </main>
 
-    <section class="drawer" class:open={consoleOpen}>
-      <button class="drawer-toggle" aria-expanded={consoleOpen} onclick={() => (consoleOpen = !consoleOpen)}>
-        {consoleOpen ? '▾' : '▸'} Protocol console <span>({amp.log.length})</span>
-      </button>
-      {#if consoleOpen}
-        <div class="drawer-body"><Console /></div>
-      {/if}
-    </section>
+    <footer class="foot">
+      <span class="foot-label">Footswitches</span>
+      <Shortcuts variant="bar" />
+    </footer>
   </div>
   <Assistant />
-  <Stage />
+{:else}
+  <div class="phone">
+    {#if ui.tab === 'tone'}
+      <div class="presetbar">
+        <button class="icon" aria-label="Previous preset" disabled={amp.loadingPreset} onclick={() => step(-1)}>‹</button>
+        <button class="now" onclick={() => (ui.tab = 'presets')} aria-label="{name}, {status}. Show presets">
+          <span class="place">{amp.current >= 0 ? `${slotName(amp.current)} · ${amp.current + 1}` : ''}{#if unsaved} · not saved{/if}</span>
+          <strong>{name}</strong>
+        </button>
+        <button class="icon" aria-label="Next preset" disabled={amp.loadingPreset} onclick={() => step(1)}>›</button>
+        <button class="save" class:clean={!unsaved} disabled={busy} onclick={() => (amp.saveDialogOpen = true)}>
+          {amp.saving ? 'Saving…' : 'Save'}
+        </button>
+      </div>
+      <Chain />
+      <div class="pane scroll">
+        <Notice />
+        {#if slot}<SlotEditor {slot} />{/if}
+      </div>
+      <footer class="strip"><Shortcuts variant="strip" /></footer>
+    {:else if ui.tab === 'presets'}
+      <div class="pane"><PresetList phone /></div>
+      <footer class="bottom"><PresetActions phone /></footer>
+    {:else if ui.tab === 'play'}
+      <div class="pane scroll"><Notice /><PlayView /></div>
+    {:else if ui.tab === 'assist'}
+      <div class="pane flush"><Assistant inline /></div>
+    {:else}
+      <div class="pane scroll more">
+        <h2>More</h2>
+        <div class="box device">
+          <AmpStatus />
+          <span class="fw">{amp.firmware ? `firmware ${amp.firmware}` : ''}{amp.remoteCode ? ` · code ${amp.remoteCode}` : ''}</span>
+          <button onclick={disconnect}>Disconnect</button>
+        </div>
+        {#if !amp.remoteCode}<div class="box listen"><span>Listen to the amp</span><AudioMonitor /></div>{/if}
+        <div class="box list"><AmpMenuItems withDisconnect={false} /></div>
+      </div>
+    {/if}
+    <nav class="tabs" aria-label="Sections">
+      {#each TABS as [tab, label] (tab)}
+        <button aria-current={ui.tab === tab ? 'page' : undefined} onclick={() => (ui.tab = tab)}>
+          <span class="bar" aria-hidden="true"></span>{label}
+        </button>
+      {/each}
+    </nav>
+  </div>
+{/if}
+
+{#if amp.status === 'ready'}
   <CatalogDialog />
+  <ConsoleDialog />
+  <ControlsDialog />
+  <SaveDialog />
+  <ShareDialog />
+  <ShortcutDialog />
 {/if}
 
 <style>
@@ -268,151 +350,323 @@
     margin: 16px 0 0 !important;
   }
 
+  /* Wide screens: header, presets on the left, editor or play view, footswitches. */
   .app {
     height: 100vh;
     display: grid;
-    grid-template: auto 1fr auto / 260px 1fr;
-    grid-template-areas: 'top top' 'side main' 'drawer drawer';
+    grid-template-columns: 264px minmax(0, 1fr);
+    grid-template-rows: 60px minmax(0, 1fr) auto;
   }
   .top {
-    grid-area: top;
+    grid-column: 1 / -1;
     display: flex;
-    flex-wrap: wrap;
     align-items: center;
-    gap: 10px 20px;
-    padding: 10px 20px;
-    border-bottom: 1px solid var(--line);
+    gap: 10px;
+    min-width: 0;
+    padding: 0 16px;
     background: var(--panel);
+    border-bottom: 1px solid var(--line);
   }
   .brand {
-    width: 220px;
-    font-weight: 800;
-    letter-spacing: 0.02em;
-    font-size: 16px;
-  }
-  .brand span { color: var(--accent); }
-  .now {
-    flex: 1;
+    flex: none;
+    width: 236px;
     display: flex;
     align-items: center;
-    gap: 12px;
-    min-width: 0;
+    gap: 10px;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .brand-name span { color: var(--accent); }
+  .icon {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    font-size: 16px;
+  }
+  .now {
+    flex: 0 1 420px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 180px;
+    padding: 4px 14px 4px 4px;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
   }
   .num {
     flex: none;
-    min-width: 40px;
-    height: 40px;
+    min-width: 32px;
+    height: 32px;
     display: grid;
     place-items: center;
-    padding: 0 6px;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-    border-radius: 8px;
-    background: var(--panel-2);
-    border: 1px solid var(--line);
+    padding: 0 4px;
+    font: 700 14px var(--mono);
+    background: var(--bg);
+    border-radius: 7px;
   }
   .title {
+    flex: 1;
     display: grid;
     min-width: 0;
-    line-height: 1.25;
+    line-height: 1.2;
   }
   .title strong {
-    font-size: 17px;
+    font-size: 15px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .state {
-    font-size: 12px;
-    color: var(--muted);
-  }
-  .right {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin-left: auto;
+    gap: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
   }
-  .assist {
+  .dot {
+    flex: none;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--g-delay);
+  }
+  .dot.unsaved { background: var(--g-stomp); }
+  .place { flex: none; font: 600 11px var(--mono); color: var(--muted); }
+  .spacer { flex: 1; }
+  .modes {
+    flex: none;
+    display: flex;
+    padding: 3px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+  }
+  .modes button {
+    padding: 6px 16px;
     font-size: 13px;
-    padding: 6px 12px;
+    font-weight: 600;
+    color: var(--muted);
+    background: transparent;
+    border: 0;
+    border-radius: 7px;
+  }
+  .modes button[aria-checked='true'] { color: var(--text); background: var(--line); }
+  .assist {
+    flex: none;
+    height: 36px;
+    padding: 0 12px;
+    font-size: 13px;
     white-space: nowrap;
   }
-  .assist span { color: var(--accent); }
+  .spark { color: var(--accent); }
   .assist[aria-expanded='true'] { border-color: var(--accent); }
+  .amp { display: flex; min-width: 0; max-width: 180px; padding: 0 6px; }
+  .save {
+    flex: none;
+    height: 36px;
+    padding: 0 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+  .save:hover:not(:disabled) { border-color: var(--accent); filter: brightness(1.1); }
+  /* Nothing to save: still there for saving a copy, but quiet. */
+  .save.clean { opacity: 0.45; }
+  .save.clean:hover:not(:disabled) { opacity: 0.8; }
   .side {
-    grid-area: side;
     display: flex;
+    flex-direction: column;
+    gap: 10px;
     min-height: 0;
-    padding: 14px;
+    padding: 14px 12px;
     border-right: 1px solid var(--line);
   }
-  .side {
-    flex-direction: column;
-  }
-  .side :global(.presets) {
-    flex: 1;
-    min-height: 0;
-  }
-  /* The list is always shown on wide screens; the toggle is for phones. */
-  .side-toggle { display: none; }
+  .side :global(.presets) { flex: 1; }
+  .side :global(.actions) { padding-top: 10px; border-top: 1px solid var(--line); }
   .main {
-    grid-area: main;
-    overflow: auto;
-    padding: 18px 22px;
     min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    padding: 22px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
   }
+  .main :global(.notice) { margin: 0; }
   .main.dragging {
     outline: 2px dashed var(--accent);
     outline-offset: -8px;
   }
-  .hint {
-    color: var(--muted);
-    font-size: 12px;
-    margin: 12px 2px 0;
-  }
-  .drawer {
-    grid-area: drawer;
-    border-top: 1px solid var(--line);
+  .foot {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 12px 28px 12px 16px;
     background: var(--panel);
-    padding: 0 20px;
+    border-top: 1px solid var(--line);
   }
-  .drawer.open { height: 38vh; display: flex; flex-direction: column; }
-  .drawer-toggle {
+  .foot-label {
+    flex: none;
+    width: 236px;
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .foot :global(.shortcuts) { overflow-x: auto; scrollbar-width: thin; }
+
+  @media (max-width: 1180px) {
+    .brand { width: auto; }
+    .brand-name, .assist-label { display: none; }
+    .foot-label { display: none; }
+  }
+  @media (max-width: 1080px) {
+    .amp { display: none; }
+  }
+  @media (max-width: 960px) {
+    .app { grid-template-columns: 220px minmax(0, 1fr); }
+    .main { padding: 18px 20px; }
+  }
+
+  /* Phones: one section at a time, picked from the tab bar. */
+  .phone {
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .phone > :global(.chain) { flex: none; }
+  .presetbar {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: calc(8px + env(safe-area-inset-top)) 12px 10px;
+  }
+  .presetbar .icon {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+    border-radius: 12px;
+  }
+  .presetbar .now {
     all: unset;
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    line-height: 1.2;
+    padding: 0 6px;
     cursor: pointer;
-    padding: 9px 0;
-    font-size: 13px;
+  }
+  .presetbar .now:focus-visible { outline: 2px solid var(--focus); border-radius: 6px; }
+  .presetbar .place { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .presetbar strong { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .presetbar .save { height: 44px; padding: 0 16px; font-size: 14px; border-radius: 12px; }
+  .pane {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: calc(6px + env(safe-area-inset-top)) 12px 12px;
+  }
+  .presetbar ~ .pane { padding-top: 0; }
+  .pane.scroll { overflow-y: auto; }
+  .pane.flush { padding: env(safe-area-inset-top) 0 0; gap: 0; }
+  .pane :global(.notice) { margin: 0; }
+  .strip, .bottom {
+    flex: none;
+    padding: 10px 12px;
+    background: var(--panel);
+    border-top: 1px solid var(--line);
+  }
+  .more h2 { margin: 0 4px; font-size: 26px; font-weight: 750; }
+  .box {
+    flex: none;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 14px;
+  }
+  .device {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px 12px;
+    padding: 14px;
+  }
+  .device :global(.status) { flex: 1; font-size: 15px; font-weight: 600; color: var(--text); }
+  .device .fw { order: 3; flex-basis: 100%; font-size: 12px; color: var(--muted); }
+  .device .fw:empty { display: none; }
+  .device button { height: 36px; padding: 0 12px; font-size: 13px; border-radius: 10px; }
+  .listen {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    font-size: 15px;
+  }
+  .list { display: flex; flex-direction: column; overflow: hidden; }
+  .list :global(.item) {
+    all: unset;
+    box-sizing: border-box;
+    display: grid;
+    gap: 1px;
+    min-height: 56px;
+    padding: 8px 32px 8px 14px;
+    font-size: 15px;
+    line-height: 1.3;
+    cursor: pointer;
+    position: relative;
+  }
+  .list :global(.item + .item) { border-top: 1px solid var(--panel-2); }
+  .list :global(.item::after) {
+    content: '›';
+    position: absolute;
+    right: 14px;
+    top: 50%;
+    transform: translateY(-50%);
     color: var(--muted);
   }
-  .drawer-toggle:focus-visible { outline: 2px solid var(--focus); }
-  .drawer-body { flex: 1; min-height: 0; padding-bottom: 10px; }
-
-  @media (max-width: 760px) {
-    .app {
-      height: auto;
-      min-height: 100vh;
-      grid-template: auto auto 1fr auto / 1fr;
-      grid-template-areas: 'top' 'side' 'main' 'drawer';
-    }
-    .top, .main, .drawer { padding-left: 16px; padding-right: 16px; }
-    .brand { width: auto; }
-    .right { margin-left: auto; }
-    .now { order: 3; flex-basis: 100%; }
-    .side {
-      border-right: 0;
-      border-bottom: 1px solid var(--line);
-      padding: 10px 16px;
-    }
-    .side-toggle {
-      all: unset;
-      display: block;
-      cursor: pointer;
-      font-size: 14px;
-      font-weight: 600;
-      padding: 4px 0;
-    }
-    .side-toggle:focus-visible { outline: 2px solid var(--focus); }
-    .side :global(.presets) { flex: none; height: 40vh; margin-top: 8px; }
-    .side.collapsed :global(.presets) { display: none; }
+  .list :global(.item small) { font-size: 12px; color: var(--muted); }
+  .list :global(.item:active) { background: var(--panel-2); }
+  .list :global(.item:focus-visible) { outline: 2px solid var(--focus); outline-offset: -2px; }
+  .list :global(.item:disabled) { opacity: 0.5; }
+  .tabs {
+    flex: none;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    padding: 6px 8px calc(8px + env(safe-area-inset-bottom));
+    background: var(--panel);
+    border-top: 1px solid var(--line);
   }
+  .tabs button {
+    display: grid;
+    justify-items: center;
+    gap: 4px;
+    min-height: 48px;
+    padding: 6px 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+    background: none;
+    border: 0;
+    border-radius: 8px;
+  }
+  .tabs button[aria-current='page'] { color: var(--text); }
+  .tabs .bar { width: 28px; height: 4px; border-radius: 2px; }
+  .tabs button[aria-current='page'] .bar { background: var(--accent); }
 </style>

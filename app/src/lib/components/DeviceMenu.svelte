@@ -1,96 +1,17 @@
 <script lang="ts">
+  // The ⋯ menu: the amp, app settings and tools.
   import { amp } from '../amp.svelte';
-  import { controls } from '../controls.svelte';
   import Menu from './Menu.svelte';
-  import ControlsDialog from './ControlsDialog.svelte';
-  import ShareDialog from './ShareDialog.svelte';
-  import { relayAvailable, remote } from '../remote.svelte';
-  import { autoConnect } from '../autoconnect.svelte';
-  import { keepAwake } from '../keepawake.svelte';
-  import { catalogStore } from '../catalog.svelte';
-  import { exportSettings, importFile } from '../settings.svelte';
-
-  let input: HTMLInputElement | undefined = $state();
-
-  function picked(e: Event) {
-    const el = e.currentTarget as HTMLInputElement;
-    const file = el.files?.[0];
-    if (file) importFile(file);
-    el.value = '';
-  }
-
-  const short = $derived(amp.demo ? 'Demo amp' : amp.label.replace(/ MIDI \d+$/, ''));
-  const awake = $derived(
-    !remote.settings.keepAwake ? 'Off: the phone may lock while you play'
-      : keepAwake.state === 'lock' ? 'On'
-        : keepAwake.state === 'waiting' ? 'Tap anywhere to start it'
-          : keepAwake.secure ? 'On, as far as this browser allows' : 'On, as far as the browser allows over http (HTTPS works best)',
-  );
-  const phones = $derived(remote.online && remote.phones ? ` · ${remote.phones} ${remote.phones === 1 ? 'phone' : 'phones'}` : '');
+  import AmpMenuItems from './AmpMenuItems.svelte';
 </script>
 
-<Menu label="Amp connection: {short}{amp.remoteCode ? ' (remote)' : phones}">
-  {#snippet button()}
-    <span class="dot" class:remote={!!amp.remoteCode} aria-hidden="true"></span>{short}{#if amp.remoteCode}<span class="via">via computer</span>{:else if phones}<span class="via">{phones}</span>{/if}
-  {/snippet}
+<Menu label="Amp and app options" title="More">
+  {#snippet button()}<span aria-hidden="true">⋯</span>{/snippet}
   {#snippet children(close)}
     <div class="meta">
-      {amp.label}{amp.firmware ? ` · firmware ${amp.firmware}` : ''}
+      {amp.demo ? 'Demo amp (simulated)' : amp.label}{amp.firmware ? ` · firmware ${amp.firmware}` : ''}
       {#if amp.remoteCode}<br />Remote control through a computer, code {amp.remoteCode}{/if}
     </div>
-    <button class="item" role="menuitem" onclick={() => { close(); amp.refresh(); }}>
-      Re-read tone
-      <small>Fetch the current tone from the amp again</small>
-    </button>
-    <button class="item" role="menuitem" onclick={() => { close(); catalogStore.dialogOpen = true; }}>
-      Model catalog…
-      <small>{catalogStore.loaded ? `${catalogStore.models} models loaded` : 'Load model names and lists from the Spider Remote app'}</small>
-    </button>
-    <button class="item" role="menuitem" onclick={() => { close(); controls.dialogOpen = true; }}>
-      Controls and MIDI pedals…
-      <small>Channel switch key, foot controllers, expression pedals</small>
-    </button>
-    {#if amp.remoteCode}
-      <button class="item" role="menuitemcheckbox" aria-checked={remote.settings.keepAwake} onclick={() => remote.update({ keepAwake: !remote.settings.keepAwake })}>
-        Keep screen on {remote.settings.keepAwake ? '✓' : ''}
-        <small>{awake}</small>
-      </button>
-    {/if}
-    {#if amp.hub && relayAvailable}
-      <button class="item" role="menuitem" onclick={() => { close(); remote.dialogOpen = true; }}>
-        Remote control from a phone…
-        <small>{remote.settings.share ? (remote.online ? `Sharing, code ${remote.settings.code}` : 'Sharing is on') : 'Use a phone on the same Wi-Fi as a remote'}</small>
-      </button>
-    {/if}
-    <button class="item" role="menuitem" onclick={() => { close(); exportSettings(); }}>
-      Export app settings
-      <small>Shortcuts, channels, controls and assistant setup, without API keys</small>
-    </button>
-    <button class="item" role="menuitem" disabled={!!amp.importing} onclick={() => { close(); input?.click(); }}>
-      Import app settings…
-      <small>Replaces those kept in this browser; you can undo it</small>
-    </button>
-    <button class="item" role="menuitem" onclick={() => { close(); if (!amp.demo && !amp.remoteCode) autoConnect.hold(); amp.disconnect(); }}>
-      Disconnect
-      <small>{amp.remoteCode ? 'Stop controlling the amp from here' : 'Close the tab to free the amp for other programs'}</small>
-    </button>
+    <AmpMenuItems {close} />
   {/snippet}
 </Menu>
-
-<input bind:this={input} type="file" accept=".json,application/json" onchange={picked} hidden />
-<ControlsDialog />
-<ShareDialog />
-
-<style>
-  .dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background: var(--g-delay);
-    box-shadow: 0 0 6px var(--g-delay);
-  }
-  .dot.remote { background: var(--g-mod); box-shadow: 0 0 6px var(--g-mod); }
-  .via { color: var(--muted); }
-  /* The blue dot marks a remote on phones; the menu says the rest. */
-  @media (max-width: 760px) { .via { display: none; } }
-</style>

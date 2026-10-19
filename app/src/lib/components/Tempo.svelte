@@ -1,19 +1,18 @@
 <script lang="ts">
   // The preset's tempo with a tap switch, like a GX-100's CTL set to tap.
-  // The LED blinks on the beat. `big` is the stage view's copy, which leaves
-  // the key to the one on the main page.
+  // The LED blinks on the beat. Styled as a footswitch by Shortcuts.
   import { amp } from '../amp.svelte';
   import { controls } from '../controls.svelte';
   import { keyLabel } from '../keys.svelte';
   import { MAX_TEMPO, MIN_TEMPO } from '../tone';
 
-  let { big = false }: { big?: boolean } = $props();
+  let { variant = 'bar' }: { variant?: 'bar' | 'strip' | 'big' } = $props();
 
   const key = $derived(controls.settings.tapKey);
   const shown = (bpm: number) => (Number.isInteger(bpm) ? String(bpm) : bpm.toFixed(1));
 
   function onkeydown(e: KeyboardEvent) {
-    if (big || !key || e.code !== key || amp.tempo === null) return;
+    if (!key || e.code !== key || amp.tempo === null) return;
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.defaultPrevented) return;
     if ((e.target as Element).closest?.('input, textarea, select, dialog, [contenteditable], [role="slider"]')) return;
     e.preventDefault();
@@ -36,9 +35,9 @@
 
 {#if amp.tempo !== null}
   {@const bpm = amp.tempo}
-  <div class="tempo" class:big>
+  <div class="fsw tempo {variant}">
     <button
-      class="tap"
+      class="fsw-press"
       aria-label="Tap tempo, {shown(bpm)} BPM"
       aria-keyshortcuts={key ? keyLabel(key) : undefined}
       title="Tap at least twice to set the tempo{key ? ` (key ${keyLabel(key)})` : ''}"
@@ -48,10 +47,10 @@
       {#key bpm}<span class="led" style:--beat="{60 / bpm}s" aria-hidden="true"></span>{/key}
       <span class="what">
         <span class="name">Tap</span>
-        {#if big}<span class="bpm">{shown(bpm)} <small>BPM</small></span>{:else}<span class="sub">Tempo</span>{/if}
+        {#if variant !== 'bar'}<span class="bpm">{shown(bpm)}{variant === 'big' ? ' BPM' : ''}</span>{/if}
       </span>
     </button>
-    {#if !big}
+    {#if variant === 'bar'}
       <label class="field">
         <input
           type="number"
@@ -59,46 +58,29 @@
           max={MAX_TEMPO}
           step="1"
           value={shown(bpm)}
+          style:width="{shown(bpm).length + 0.4}ch"
           aria-label="Tempo in BPM"
           onchange={typed}
           onkeydown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); }}
         />
         <span>BPM</span>
       </label>
+      {#if key}<kbd class="key" aria-hidden="true">{keyLabel(key)}</kbd>{/if}
     {/if}
-    {#if key}<kbd class="key" aria-hidden="true">{keyLabel(key)}</kbd>{/if}
   </div>
 {/if}
 
 <style>
-  .tempo {
-    position: relative;
-    display: flex;
-    align-items: stretch;
-    width: 168px;
-    border-radius: 10px;
-    border: 1px solid var(--line);
-    background: var(--panel-2);
-  }
-  .tap {
-    all: unset;
-    box-sizing: border-box;
-    flex: 1;
-    display: flex;
-    align-items: center;
-    gap: 9px;
-    padding: 9px 4px 9px 10px;
-    cursor: pointer;
-    border-radius: 10px 0 0 10px;
-    touch-action: manipulation;
-    user-select: none;
-  }
-  .tap:active { background: var(--panel); }
-  .tap:focus-visible { outline: 2px solid var(--focus); }
+  .tempo { width: 170px; }
+  .tempo.strip { width: auto; }
+  .tempo.big { width: auto; }
+  .fsw-press { align-self: stretch; }
+  .bar .fsw-press { padding-right: 0; }
+  .fsw-press:active { background: var(--panel); }
   .led {
     flex: none;
-    width: 10px;
-    height: 10px;
+    width: 12px;
+    height: 12px;
     border-radius: 50%;
     background: var(--knob-track);
     animation: beat var(--beat) steps(1, end) infinite;
@@ -110,49 +92,50 @@
   @media (prefers-reduced-motion: reduce) {
     .led { animation: none; }
   }
-  .what { display: grid; line-height: 1.25; }
-  .name { font-size: 13px; font-weight: 600; }
-  .sub { font-size: 11px; color: var(--muted); }
+  .what { display: grid; line-height: 1.2; }
+  .name { font-size: 14px; font-weight: 600; }
+  .bpm { font: 600 12px var(--mono); color: var(--muted); }
+  /* The tempo reads like the switch's caption but can be typed into. */
   .field {
+    position: absolute;
+    left: 38px;
+    bottom: 11px;
     display: flex;
-    align-items: center;
+    align-items: baseline;
     gap: 4px;
-    padding: 0 8px 14px 0;
-    font-size: 11px;
+    font: 600 12px var(--mono);
     color: var(--muted);
   }
   input {
-    width: 52px;
-    font: 600 14px var(--mono);
-    color: var(--text);
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 6px;
-    padding: 4px 4px;
-    text-align: right;
+    margin: 0 -2px;
+    padding: 0 2px;
+    font: inherit;
+    color: var(--muted);
+    background: transparent;
+    border: 0;
+    border-radius: 4px;
     -moz-appearance: textfield;
     appearance: textfield;
   }
+  input:hover, input:focus { color: var(--text); background: var(--panel); }
   input::-webkit-inner-spin-button, input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
   input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  .bar .what { align-self: flex-start; margin-top: 10px; }
   .key {
     position: absolute;
-    right: 8px;
-    bottom: 7px;
-    min-width: 1.5em;
-    padding: 0 4px;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 0 5px;
     font: 600 11px/16px var(--mono);
-    text-align: center;
-    color: var(--text);
+    color: var(--muted);
     border: 1px solid var(--line);
     border-bottom-width: 2px;
     border-radius: 4px;
     pointer-events: none;
   }
-  .big { width: 100%; }
-  .big .tap { padding: 18px; gap: 14px; border-radius: 10px; }
-  .big .led { width: 18px; height: 18px; }
-  .big .name { font-size: 20px; }
-  .big .bpm { font: 600 18px var(--mono); }
-  .big .bpm small { font-family: inherit; font-size: 12px; font-weight: 400; color: var(--muted); }
+  .strip .led { width: 10px; height: 10px; }
+  .strip .what { display: flex; align-items: baseline; gap: 8px; }
+  .big .led { width: 16px; height: 16px; }
+  .big .name { font-size: 17px; font-weight: 700; }
 </style>

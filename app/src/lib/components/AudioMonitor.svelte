@@ -72,10 +72,19 @@
   }
   button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
   button:disabled { opacity: 0.5; cursor: default; }
-  .listen {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
+  .listen, .more {
+    height: 36px;
+    display: inline-grid;
+    place-items: center;
+  }
+  .listen { width: 36px; padding: 0; }
+  /* The icon says it; the label is for screen readers. */
+  .listen .text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
   }
   .listen svg {
     width: 16px;
@@ -90,9 +99,9 @@
     border-color: var(--accent);
     color: #fff;
   }
-  .more { padding: 5px 8px; }
+  .monitor { gap: 6px; }
+  .more { padding: 0 6px; font-size: 11px; color: var(--muted); }
   @media (max-width: 760px) {
-    .listen .text { display: none; }
     .meter { width: 50px; }
   }
   .meter {

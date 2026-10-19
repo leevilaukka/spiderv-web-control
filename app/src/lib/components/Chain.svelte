@@ -27,13 +27,33 @@
     const first = ordered.findIndex(inCh);
     if (first < 0) return null;
     const last = ordered.findLastIndex(inCh);
-    // Grid columns: the blocks, plus the A/B column where the chain splits.
-    const cols = ordered.map(() => 'minmax(86px, 1fr)');
-    cols.splice(first, 0, 'auto');
-    return { ch, inCh, first, last, cols: cols.join(' ') };
+    return { ch, inCh, first, last };
   });
-  const col = (i: number) => (split && i >= split.first ? i + 2 : i + 1);
-  const rowOf = (c: ChannelId) => (c === 'A' ? 1 : 2);
+
+  // The blocks sit in three groups: before the amp, the amp and its cab, and
+  // after the amp. Grid columns: a block each, an empty column between
+  // groups (which doubles the gap), and the A/B column where the chain splits.
+  const ZONES = ['Before amp', 'Amp', 'After amp'];
+  const layout = $derived.by(() => {
+    const ampAt = ordered.findIndex((s) => s.sym === 'Amp');
+    const zones: number[] = ordered.map((s, i) => (s.sym === 'Amp' || s.sym === 'StudioCab' ? 1 : i < ampAt ? 0 : 2));
+    const cols: string[] = [];
+    const at: number[] = [];
+    let letter = 0;
+    ordered.forEach((_, i) => {
+      if (i > 0 && zones[i] !== zones[i - 1]) cols.push('0px');
+      if (split && i === split.first) { cols.push('auto'); letter = cols.length; }
+      cols.push('var(--col)');
+      at.push(cols.length);
+    });
+    const groups = ZONES.flatMap((label, z) => {
+      const first = zones.indexOf(z);
+      return first < 0 ? [] : [{ label, from: at[first], to: at[zones.lastIndexOf(z)] + 1 }];
+    });
+    return { cols: cols.join(' '), at, letter, groups };
+  });
+  const col = (i: number) => layout.at[i];
+  const rowOf = (c: ChannelId) => (c === 'A' ? 2 : 3);
   const inactive = $derived(split ? (split.ch.active === 'A' ? 'B' : 'A') : 'B');
 
   // The inactive channel's version of a block, from its stored settings.
@@ -169,6 +189,12 @@
     moveBy(sym, e.key === 'ArrowLeft' ? -1 : 1);
   }
 
+  // Keep the selected block in view, as on phones the row scrolls.
+  $effect(() => {
+    void amp.selected;
+    list?.querySelector('.block.selected')?.scrollIntoView({ block: 'nearest', inline: 'center' });
+  });
+
   // A drag mustn't scroll the page on touch screens.
   $effect(() => {
     if (!list) return;
@@ -181,7 +207,7 @@
   const codeOf = Object.fromEntries(Object.entries(BLOCK_KEYS).map(([code, sym]) => [sym, code]));
 
   function onkeydown(e: KeyboardEvent) {
-    // In the stage view's memory mode the number keys pick presets instead.
+    // In the play view the number keys pick presets instead.
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.defaultPrevented || controls.memoryKeys) return;
     if ((e.target as Element).closest?.('input, textarea, select, dialog, [contenteditable]')) return;
     const slot = amp.chain.find((s) => s.sym === BLOCK_KEYS[e.code]);
@@ -210,9 +236,9 @@
     onpointerdown={(e) => onpointerdown(e, slot.sym)}
     onclickcapture={(e) => { if (suppressClick) { e.stopPropagation(); e.preventDefault(); } }}
     oncontextmenu={(e) => { if (canMove && (press || drag)) e.preventDefault(); }}
-    style:grid-column={split ? column : undefined}
-    style:grid-row={split ? row : undefined}
-    class:shared={split && row === '1 / span 2'}
+    style:grid-column={column}
+    style:grid-row={row}
+    class:shared={split && row === '2 / span 2'}
   >
     <button
       class="select"
@@ -231,15 +257,18 @@
         aria-label="{slot.label} {on ? 'on' : 'off'}"
         aria-pressed={on}
         aria-keyshortcuts={code ? keyLabel(code) : undefined}
-        title={code ? `Toggle (key ${keyLabel(code)})` : undefined}
+        title={code ? `On / off (key ${keyLabel(code)})` : 'On / off'}
         onclick={() => amp.toggle(slot)}
-      ></button>
+      ><span class="led"></span></button>
       {#if code}<kbd class="key" aria-hidden="true">{keyLabel(code)}</kbd>{/if}
     {/if}
   </li>
 {/snippet}
 
-<ol class="chain" class:split={!!split} class:busy={amp.arranging} bind:this={list} style:grid-template-columns={split?.cols} aria-label="Signal chain">
+<ol class="chain" class:split={!!split} class:busy={amp.arranging} bind:this={list} style:grid-template-columns={layout.cols} aria-label="Signal chain">
+  {#each layout.groups as g (g.label)}
+    <li class="group" aria-hidden="true" style:grid-column="{g.from} / {g.to}"><span>{g.label}</span></li>
+  {/each}
   {#if drag}
     {#each drag.gaps as x, i (i)}
       <li class="gap" class:at={drag.at === drag.targets[i]} style:left="{x}px" aria-hidden="true"></li>
@@ -249,8 +278,8 @@
     {#if split && i === split.first}
       {#each ['A', 'B'] as const as c (c)}
         {@const active = split.ch.active === c}
-        <li class="lane" class:active aria-hidden="true" style:grid-column="{col(split.first) - 1} / {col(split.last) + 1}" style:grid-row={rowOf(c)}></li>
-        <li class="letter-cell" style:grid-column={col(split.first) - 1} style:grid-row={rowOf(c)}>
+        <li class="lane" class:active aria-hidden="true" style:grid-column="{layout.letter} / {col(split.last) + 1}" style:grid-row={rowOf(c)}></li>
+        <li class="letter-cell" style:grid-column={layout.letter} style:grid-row={rowOf(c)}>
           <button
             class="letter"
             class:active
@@ -278,51 +307,72 @@
             aria-pressed={g.on}
             title="On/off in channel {inactive}"
             onclick={() => amp.setOtherSetting(g.group, '@enabled', !g.on)}
-          ></button>
+          ><span class="led"></span></button>
         {/if}
       </li>
     {:else}
-      {@render live(slot, col(i), '1 / span 2')}
+      {@render live(slot, col(i), split ? '2 / span 2' : '2')}
     {/if}
   {/each}
 </ol>
 
 <style>
   .chain {
+    --col: minmax(86px, 1fr);
+    position: relative;
+    flex: none;
     list-style: none;
     margin: 0;
-    padding: 4px 0 12px;
-    display: flex;
-    gap: 12px;
+    padding: 0 0 4px;
+    display: grid;
+    grid-template-rows: auto;
+    gap: 8px;
     overflow-x: auto;
     scroll-snap-type: x proximity;
     scrollbar-width: thin;
   }
+  /* Group headings: a label and a rule across the group's blocks. */
+  .group {
+    grid-row: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .group::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
   .block {
     position: relative;
-    flex: 1 1 0;
-    min-width: 86px;
-    max-width: 140px;
-    border-radius: 10px;
-    background: var(--panel-2);
+    min-width: 0;
+    height: 112px;
+    border-radius: 12px;
+    overflow: hidden;
+    background: transparent;
     border: 1px solid var(--line);
-    border-top: 4px solid color-mix(in srgb, var(--c) 30%, transparent);
     scroll-snap-align: start;
     transition: border-color 0.15s, background 0.15s;
   }
-  .block:not(.on) { background: transparent; }
-  .block:not(:last-child)::after {
+  /* The colour strip: full when on, faint when off. */
+  .block::before {
     content: '';
     position: absolute;
-    right: -13px;
-    top: 50%;
-    width: 12px;
-    height: 2px;
-    background: var(--line);
+    inset: 0 0 auto;
+    height: 3px;
+    background: color-mix(in srgb, var(--c) 30%, transparent);
   }
-  .block.on { border-top-color: var(--c); }
+  .block.on { background: var(--panel-2); }
+  .block.on::before { background: var(--c); }
   .block:not(.on) .model { color: var(--muted); }
   .block.selected {
+    background: color-mix(in srgb, var(--c) 12%, var(--panel-2));
     border-color: var(--c);
     box-shadow: 0 0 0 1px var(--c);
   }
@@ -330,69 +380,74 @@
     all: unset;
     box-sizing: border-box;
     display: grid;
-    gap: 4px;
+    align-content: start;
+    gap: 3px;
     width: 100%;
-    padding: 10px 9px 26px;
+    height: 100%;
+    padding: 12px 10px 34px;
     cursor: pointer;
-    border-radius: 10px;
+    border-radius: 12px;
   }
-  .select:focus-visible { outline: 2px solid var(--focus); }
+  .select:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
   .slot {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .model {
     font-size: 13px;
     font-weight: 600;
     line-height: 1.25;
-    min-height: 2.5em;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
     overflow-wrap: break-word;
     hyphens: auto;
   }
   /* Off: hollow ring in the block colour. On: filled and glowing. */
   .power {
     position: absolute;
-    left: 10px;
-    bottom: 8px;
-    width: 13px;
-    height: 13px;
+    left: 4px;
+    bottom: 4px;
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
     padding: 0;
-    border-radius: 50%;
-    border: 2px solid color-mix(in srgb, var(--c) 60%, var(--muted));
     background: transparent;
+    border: 0;
+    border-radius: 50%;
     cursor: pointer;
   }
-  .power::before {
-    content: '';
-    position: absolute;
-    inset: -8px;
+  .led {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--c) 60%, var(--muted));
   }
-  .on .power {
+  .on .led {
     background: var(--c);
     border-color: var(--c);
     box-shadow: 0 0 9px var(--c);
   }
-  .power:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .power:focus-visible { outline: 2px solid var(--focus); }
   .key {
     position: absolute;
     right: 8px;
-    bottom: 6px;
-    min-width: 1.5em;
-    padding: 0 4px;
-    font: 600 11px/16px var(--mono);
-    text-align: center;
+    bottom: 9px;
+    font: 600 10px/14px var(--mono);
     color: var(--muted);
-    border: 1px solid var(--line);
-    border-bottom-width: 2px;
-    border-radius: 4px;
+    opacity: 0.7;
     pointer-events: none;
   }
-  .on .key { color: var(--text); }
 
   /* Moving blocks. */
-  .chain { position: relative; }
   .block.movable { cursor: grab; -webkit-touch-callout: none; user-select: none; }
   .block.movable .select { cursor: grab; }
   .block.dragging {
@@ -404,11 +459,10 @@
     transition: none;
     pointer-events: none;
   }
-  .block.dragging::after { display: none; }
   .gap {
     position: absolute;
-    top: 4px;
-    bottom: 12px;
+    top: 26px;
+    bottom: 4px;
     width: 4px;
     margin-left: -2px;
     border-radius: 2px;
@@ -423,17 +477,12 @@
   .busy { opacity: 0.7; pointer-events: none; }
 
   /* Split view for channels A/B. */
-  .chain.split {
-    display: grid;
-    grid-template-rows: auto auto;
-    gap: 10px 12px;
-  }
-  .split .block { min-width: 0; max-width: none; z-index: 1; }
+  .chain.split { row-gap: 10px; }
+  .split .block { z-index: 1; height: 96px; }
   .split .block.shared { align-self: center; }
-  .split .block::after { display: none; }
   .lane {
     margin: -5px -6px;
-    border-radius: 13px;
+    border-radius: 15px;
     border: 1px dashed var(--line);
     pointer-events: none;
   }
@@ -464,8 +513,22 @@
   .ghost {
     opacity: 0.6;
     border-style: dashed;
-    border-top-style: solid;
   }
   .ghost:hover, .ghost:focus-within { opacity: 0.85; }
   .moved { margin-left: 0.35em; text-transform: none; letter-spacing: 0; }
+
+  /* Phones: a swipeable row of smaller blocks, without group headings. */
+  @media (max-width: 760px) {
+    .chain { --col: 92px; row-gap: 0; padding: 2px 12px 12px; scrollbar-width: none; scroll-padding: 0 12px; }
+    .chain.split { row-gap: 10px; }
+    .group { display: none; }
+    .block, .split .block { height: 80px; }
+    .select { gap: 1px; padding: 9px 8px 8px; }
+    .slot { font-size: 10px; }
+    .model { font-size: 12px; line-height: 1.2; -webkit-line-clamp: 2; line-clamp: 2; }
+    .power { left: auto; right: 0; bottom: 0; width: 36px; height: 32px; border-radius: 0; }
+    .led { width: 12px; height: 12px; }
+    .key { display: none; }
+    .gap { top: 2px; bottom: 12px; }
+  }
 </style>

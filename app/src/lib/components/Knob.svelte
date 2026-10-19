@@ -103,13 +103,13 @@
   .knob {
     display: grid;
     justify-items: center;
-    gap: 2px;
-    width: 76px;
+    gap: 3px;
+    width: 96px;
     user-select: none;
   }
   svg {
-    width: 64px;
-    height: 64px;
+    width: 84px;
+    height: 84px;
     cursor: ns-resize;
     touch-action: none;
     border-radius: 50%;
@@ -135,7 +135,7 @@
   }
   .value {
     font-variant-numeric: tabular-nums;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 600;
   }
   .label {
@@ -143,5 +143,9 @@
     color: var(--muted);
     text-align: center;
     line-height: 1.2;
+  }
+  @media (max-width: 760px) {
+    .knob { width: auto; gap: 2px; }
+    svg { width: 76px; height: 76px; }
   }
 </style>

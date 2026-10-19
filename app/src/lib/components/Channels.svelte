@@ -7,7 +7,7 @@
   import { keyLabel } from '../keys.svelte';
   import { groupColor } from '../colors';
 
-  let { big = false }: { big?: boolean } = $props();
+  let { variant = 'bar' }: { variant?: 'bar' | 'strip' | 'big' } = $props();
 
   let dialog: HTMLDialogElement | undefined = $state();
   let picked = $state<string[]>([]);
@@ -34,9 +34,8 @@
     amp.setChannels(null);
   }
 
-  // Only the copy on the main page handles the key, so the stage view's copy doesn't switch twice.
   function onkeydown(e: KeyboardEvent) {
-    if (big || !ch || !controls.settings.channelKey || e.code !== controls.settings.channelKey) return;
+    if (!ch || !controls.settings.channelKey || e.code !== controls.settings.channelKey) return;
     if (e.ctrlKey || e.metaKey || e.altKey || e.repeat || e.defaultPrevented) return;
     if ((e.target as Element).closest?.('input, textarea, select, dialog, [contenteditable], [role="slider"]')) return;
     e.preventDefault();
@@ -47,9 +46,9 @@
 <svelte:window {onkeydown} />
 
 {#if ch}
-  <div class="ch" class:big>
+  <div class="fsw ch {variant}">
     <button
-      class="ab"
+      class="fsw-press ab"
       disabled={amp.switching}
       aria-label="Channel {ch.active}; switch to {ch.active === 'A' ? 'B' : 'A'}"
       aria-keyshortcuts={controls.settings.channelKey ? keyLabel(controls.settings.channelKey) : undefined}
@@ -57,18 +56,19 @@
     >
       <span class="letter" class:on={ch.active === 'A'}>A</span>
       <span class="letter" class:on={ch.active === 'B'}>B</span>
-      <span class="what">
-        <span class="name">Channel {ch.active}</span>
-        <span class="blocks">{groupsLabel(ch.groups)}</span>
-      </span>
+      {#if variant !== 'strip'}
+        <span class="what">
+          <span class="name">Channel {ch.active}</span>
+          <span class="blocks">{groupsLabel(ch.groups)}</span>
+        </span>
+      {/if}
     </button>
-    {#if !big}<button class="edit" aria-label="Edit channels" title="Edit channels" onclick={openSetup}>✎</button>{/if}
-    {#if controls.settings.channelKey}<kbd class="key" aria-hidden="true">{keyLabel(controls.settings.channelKey)}</kbd>{/if}
+    {#if variant !== 'strip'}<button class="fsw-edit" aria-label="Edit channels" title="Edit channels" onclick={openSetup}>✎</button>{/if}
+    {#if variant === 'bar' && controls.settings.channelKey}<kbd class="key" aria-hidden="true">{keyLabel(controls.settings.channelKey)}</kbd>{/if}
   </div>
-{:else if !big}
-  <button class="add" onclick={openSetup}>
-    <span><span aria-hidden="true">+</span> Channels A/B</span>
-    <small>Two setups of the amp or blocks</small>
+{:else if variant !== 'strip'}
+  <button class="add" onclick={openSetup} title="Two setups of the amp or blocks, like a GX-100's two amps">
+    <span aria-hidden="true">+</span> Channels A/B
   </button>
 {/if}
 
@@ -110,37 +110,22 @@
 
 <style>
   .ch {
-    position: relative;
-    width: 168px;
-    border-radius: 10px;
-    border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
-    background: var(--panel-2);
+    width: 170px;
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
   }
-  .ab {
-    all: unset;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    width: 100%;
-    padding: 9px 30px 9px 10px;
-    cursor: pointer;
-    border-radius: 10px;
-    touch-action: manipulation;
-    user-select: none;
-  }
+  .ch.strip, .ch.big { width: auto; }
+  .ab { gap: 8px; }
   .ab:disabled { cursor: progress; }
-  .ab:focus-visible { outline: 2px solid var(--focus); }
   .letter {
     flex: none;
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
     display: grid;
     place-items: center;
-    font: 700 12px/1 var(--mono);
+    font: 700 13px/1 var(--mono);
     color: var(--muted);
     border: 1px solid var(--line);
-    border-radius: 5px;
+    border-radius: 6px;
   }
   .letter.on {
     color: #fff;
@@ -151,10 +136,10 @@
   .what {
     display: grid;
     min-width: 0;
-    margin-left: 4px;
-    line-height: 1.25;
+    margin-left: 2px;
+    line-height: 1.2;
   }
-  .name { font-size: 13px; font-weight: 600; }
+  .name { font-size: 14px; font-weight: 600; white-space: nowrap; }
   .blocks {
     font-size: 11px;
     color: var(--muted);
@@ -162,59 +147,38 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .big { width: 100%; }
-  .big .ab { padding: 18px; gap: 10px; }
-  .big .letter { width: 44px; height: 44px; font-size: 22px; border-radius: 8px; }
-  .big .name { font-size: 20px; }
-  .big .blocks { font-size: 13px; }
-  .edit {
-    all: unset;
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    width: 22px;
-    height: 22px;
-    display: grid;
-    place-items: center;
-    font-size: 13px;
-    color: var(--muted);
-    border-radius: 5px;
-    cursor: pointer;
-  }
-  .edit:hover { color: var(--text); background: var(--panel); }
-  .edit:focus-visible { outline: 2px solid var(--focus); }
+  .strip .letter { width: 24px; height: 24px; font-size: 12px; }
+  .strip .ab { gap: 6px; padding: 0 12px; }
+  .big .letter { width: 32px; height: 32px; font-size: 15px; border-radius: 7px; }
+  .big .name { font-size: 17px; font-weight: 700; }
   .key {
     position: absolute;
     right: 8px;
-    bottom: 7px;
-    min-width: 1.5em;
+    bottom: 6px;
     padding: 0 4px;
-    font: 600 11px/16px var(--mono);
-    text-align: center;
-    color: var(--text);
+    font: 600 10px/14px var(--mono);
+    color: var(--muted);
     border: 1px solid var(--line);
     border-bottom-width: 2px;
     border-radius: 4px;
     pointer-events: none;
   }
   .add {
-    display: grid;
-    align-content: center;
-    gap: 2px;
-    min-height: 58px;
-    padding: 8px 14px;
+    flex: none;
+    height: 60px;
+    padding: 0 16px;
     font: inherit;
     font-size: 13px;
     color: var(--muted);
     background: transparent;
     border: 1px dashed var(--line);
-    border-radius: 10px;
+    border-radius: 12px;
     cursor: pointer;
-    text-align: left;
+    white-space: nowrap;
   }
   .add:hover { color: var(--text); border-color: var(--muted); }
   .add:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  .add small { font-size: 11px; }
+  :global(.big) > .add { height: auto; min-height: 64px; border-radius: 14px; }
 
   dialog {
     width: min(440px, calc(100vw - 32px));

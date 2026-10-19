@@ -20,8 +20,9 @@ Tested with a Spider V 20 MkII on firmware 2.0.1.
     or type it; the LED blinks on the beat
   - **Channels A/B**: two setups of the amp, cab or any blocks in one preset, switched with one key,
     like a switched dual amp or two-way chain (the Spider V has one amp, so they take turns)
-  - **Stage view**: big footswitch buttons; memory mode picks presets in banks of four, manual mode switches blocks
-    (long-press or right-click a block to turn its knobs without leaving the stage view)
+  - **Play view**: presets in banks of four, picked with keys 1–4 like a GX-100's memory mode, and big block switches
+    (long-press or right-click a block to edit its knobs)
+  - On phones, a tab bar: Tone, Presets, Play, Assist and More
   - **MIDI pedals**: program change selects presets, footswitches trigger shortcuts, tap tempo or the channel switch,
     and an expression pedal sweeps a shortcut's knobs
   - The tone assistant can set up shortcuts and channels too

@@ -1,64 +1,49 @@
 <script lang="ts">
-  // Save button plus a menu for tone files and backups.
+  // Tone file buttons under the preset list. Phones offer a backup instead of
+  // an export, which they rarely need.
   import { amp } from '../amp.svelte';
   import { importFile } from '../settings.svelte';
-  import Menu from './Menu.svelte';
-  import SaveDialog from './SaveDialog.svelte';
+  import { TONE_FILES, pickFile } from '../pickfile';
 
-  let input: HTMLInputElement | undefined = $state();
+  let { phone = false }: { phone?: boolean } = $props();
   const busy = $derived(!!amp.importing || amp.saving);
-
-  function picked(e: Event) {
-    const el = e.currentTarget as HTMLInputElement;
-    const file = el.files?.[0];
-    if (file) importFile(file);
-    el.value = '';
-  }
 </script>
 
-<div class="actions">
-  <button class="save" disabled={busy} onclick={() => (amp.saveDialogOpen = true)}>
-    {amp.saving ? 'Saving…' : 'Save…'}
+<div class="actions" class:phone>
+  <button disabled={busy} title=".svl6p or .json; you can also drop a file on the page" onclick={() => pickFile(TONE_FILES, importFile)}>
+    Import tone…
   </button>
-  <Menu label="Tone file and backup options" title="Import, export, back up">
-    {#snippet button()}<span aria-hidden="true">⋯</span>{/snippet}
-    {#snippet children(close)}
-      <button class="item" role="menuitem" disabled={busy} onclick={() => { close(); input?.click(); }}>
-        Import tone…
-        <small>.svl6p or .json; you can also drop a file on the page</small>
-      </button>
-      <button class="item" role="menuitem" disabled={busy} onclick={() => { close(); amp.exportTone(); }}>
-        Export tone
-        <small>Download the current tone as .svl6p, with its shortcuts and channels</small>
-      </button>
-      <button class="item" role="menuitem" disabled={busy} onclick={() => { close(); amp.backupPresets(); }}>
-        Back up all presets
-        <small>Download all {amp.presets.length} presets as one file</small>
-      </button>
-    {/snippet}
-  </Menu>
-  <input bind:this={input} type="file" accept=".svl6p,.slv6p,.l6t,.json,.bin,application/json" onchange={picked} hidden />
+  {#if phone}
+    <button disabled={busy} title="Download all {amp.presets.length} presets as one file" onclick={() => amp.backupPresets()}>Back up all</button>
+  {:else}
+    <button disabled={busy} title="Download the current tone as .svl6p, with its shortcuts and channels" onclick={() => amp.exportTone()}>Export</button>
+  {/if}
 </div>
-
-<SaveDialog />
 
 <style>
   .actions {
     display: flex;
-    align-items: center;
-    gap: 6px;
+    gap: 8px;
   }
-  .save {
+  button {
+    flex: 1;
+    padding: 7px 0;
     font: inherit;
     font-size: 13px;
-    font-weight: 600;
-    color: #fff;
-    background: var(--accent);
-    border: 1px solid var(--accent);
+    color: var(--text);
+    background: transparent;
+    border: 1px solid var(--line);
     border-radius: 8px;
-    padding: 6px 14px;
     cursor: pointer;
   }
-  .save:disabled { opacity: 0.6; cursor: default; }
-  .save:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  button:hover:not(:disabled) { border-color: var(--muted); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  .phone button {
+    height: 44px;
+    padding: 0;
+    font-size: 14px;
+    background: var(--panel-2);
+    border-radius: 12px;
+  }
 </style>

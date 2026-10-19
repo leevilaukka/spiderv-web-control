@@ -36,7 +36,7 @@
     if (/^(Shift|Control|Alt|Meta|OS)/.test(e.code)) return;
     const other: Which = which === 'channel' ? 'tap' : 'channel';
     const c = keyConflict(e.code, shortcuts.list, undefined, {
-      ArrowLeft: 'bank down in the stage view', ArrowRight: 'bank up in the stage view',
+      ArrowLeft: 'bank down in the play view', ArrowRight: 'bank up in the play view',
       ...(controls.settings[KEY[other]] ? { [controls.settings[KEY[other]]]: other === 'tap' ? 'tap tempo' : 'the channel switch' } : {}),
     });
     const fail = (text: string) => (keyError = { which, text });

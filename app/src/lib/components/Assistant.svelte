@@ -1,5 +1,5 @@
 <script lang="ts">
-  // Side panel for the tone assistant chat.
+  // Side panel for the tone assistant chat; `inline` is the phone's Assist tab.
   import { amp } from '../amp.svelte';
   import { PROVIDERS, assistant } from '../assistant.svelte';
   import type { ProviderId } from '../ai/provider';
@@ -15,6 +15,8 @@
     'Crunch rhythm with a Q shortcut for a solo boost and delay',
     'Clean amp on channel A, high-gain lead amp on channel B',
   ];
+
+  let { inline = false }: { inline?: boolean } = $props();
 
   let draft = $state('');
   let editingKey = $state(false);
@@ -56,7 +58,7 @@
   });
 
   $effect(() => {
-    if (assistant.open && !needsKey) input?.focus();
+    if (assistant.open && !inline && !needsKey) input?.focus();
   });
 
   function send(text = draft) {
@@ -98,12 +100,12 @@
   }
 </script>
 
-<svelte:window onkeydown={(e) => { if (e.key === 'Escape' && assistant.open && !amp.saveDialogOpen) assistant.open = false; }} />
+<svelte:window onkeydown={(e) => { if (!inline && e.key === 'Escape' && assistant.open && !amp.saveDialogOpen) assistant.open = false; }} />
 
-{#if assistant.open}
-  <section class="panel" aria-label="Tone assistant">
+{#if assistant.open || inline}
+  <section class="panel" class:inline aria-label="Tone assistant">
     <header>
-      <h2>Tone assistant</h2>
+      <h2>{#if inline}<span class="spark" aria-hidden="true">✦</span>{' '}{/if}Tone assistant</h2>
       {#if assistant.recent.length || showRecent}
         <button class="link" aria-pressed={showRecent} onclick={() => (showRecent = !showRecent)}>
           {showRecent ? 'Back to chat' : `Recent (${assistant.recent.length})`}
@@ -112,7 +114,7 @@
       {#if assistant.items.length && !needsKey && !showRecent}
         <button class="link" onclick={() => { assistant.reset(); openDetails = {}; }}>New chat</button>
       {/if}
-      <button class="close" aria-label="Close tone assistant" onclick={() => (assistant.open = false)}>✕</button>
+      {#if !inline}<button class="close" aria-label="Close tone assistant" onclick={() => (assistant.open = false)}>✕</button>{/if}
     </header>
 
     {#if catalogStore.origin === 'none'}
@@ -284,6 +286,18 @@
     background: var(--panel);
     border-left: 1px solid var(--line);
     box-shadow: -12px 0 32px rgb(0 0 0 / 0.25);
+  }
+  .inline header { padding: 6px 16px 4px; border-bottom: 0; }
+  .inline h2 { font-size: 26px; font-weight: 750; }
+  .spark { color: var(--accent); }
+  .panel.inline {
+    position: static;
+    flex: 1;
+    width: auto;
+    min-height: 0;
+    background: none;
+    border: 0;
+    box-shadow: none;
   }
   header {
     display: flex;
