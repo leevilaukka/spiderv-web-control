@@ -13,7 +13,7 @@
   "bugs": "https://github.com/leevilaukka/spiderv-web-control/issues",
   "scripts": {
     "build": "bun build.ts",
-    "prepublishOnly": "echo 'Publish the built package: bun run build:lib, then npm publish ./dist' && exit 1"
+    "prepublishOnly": "echo 'Publish the built package: bun run build:lib, then cd dist && npm publish' && exit 1"
   },
   "exports": {
     ".": "./src/index.ts",

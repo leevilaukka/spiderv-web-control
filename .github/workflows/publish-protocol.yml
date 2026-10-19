@@ -32,6 +32,6 @@ jobs:
           [ "$GITHUB_REF_NAME" = "spiderv-protocol-v$v" ] || { echo "tag $GITHUB_REF_NAME does not match version $v"; exit 1; }
 
       - run: bun run build:lib
-      - run: npm publish ./dist --provenance --access public
+      - run: npm publish ./packages/spiderv/dist --provenance --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
