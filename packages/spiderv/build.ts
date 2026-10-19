@@ -4,7 +4,7 @@ import { cp, rm, writeFile } from 'node:fs/promises';
 
 const dir = new URL('./', import.meta.url).pathname;
 const dist = dir + 'dist';
-const entries = ['index', 'codec', 'client', 'hub', 'webmidi', 'nodemidi'];
+const entries = ['index', 'codec', 'client', 'hub', 'webmidi', 'nodemidi', 'framing'];
 
 await rm(dist, { recursive: true, force: true });
 

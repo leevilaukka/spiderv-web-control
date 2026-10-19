@@ -21,7 +21,8 @@
     "./client": "./src/client.ts",
     "./hub": "./src/hub.ts",
     "./webmidi": "./src/webmidi.ts",
-    "./nodemidi": "./src/nodemidi.ts"
+    "./nodemidi": "./src/nodemidi.ts",
+    "./framing": "./src/framing.ts"
   },
   "files": [
     "src"

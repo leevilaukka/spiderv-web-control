@@ -3,3 +3,4 @@ export * from './client';
 export * from './hub';
 export * from './webmidi';
 export * from './nodemidi';
+export * from './framing';
